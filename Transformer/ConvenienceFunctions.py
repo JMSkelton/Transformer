@@ -1,0 +1,485 @@
+# Transformer/ConvenienceFunctions.py by J. M. SKelton
+
+
+# -------
+# Imports
+# -------
+
+import os;
+import tarfile;
+import warnings;
+
+from Transformer import Constants;
+from Transformer import IO;
+from Transformer import StructureTools;
+
+
+# ---------------------
+# Convenience Functions
+# ---------------------
+
+def AnitsiteDefects(structure, atomTypeNumber1, atomicSymbol1, atomTypeNumber2, atomicSymbol2, printProgressUpdate = True, tolerance = None):
+    pass; # TODO!
+
+def SchottkyDefects(structure, defectAtoms, printProgressUpdate = True, tolerance = None):
+    pass; # TODO!
+
+def SolidSolution(structure, atomTypeNumber1 = None, atomicSymbol1 = None, atomTypeNumber2 = None, atomicSymbol2 = None, printProgressUpdate = True, tolerance = None):
+    # Check input.
+
+    if (atomTypeNumber1 == None and atomicSymbol1 == None) or (atomTypeNumber2 == None and atomicSymbol2 == None):
+        raise Exception("Error: One each of atomTypeNumber1/atomicSymbol1 and atomTypeNumber2/atomicSymbol2 must be set.");
+
+    if (atomTypeNumber1 != None and atomicSymbol1 != None) or (atomTypeNumber2 != None and atomicSymbol2 != None):
+        warnings.warn("When both atomTypeNumber* and atomicSymbol* are supplied, atomTypeNumber* takes precedence.", UserWarning);
+
+    atomFind = atomTypeNumber1 if atomTypeNumber1 != None else Constants.SymbolToAtomicNumber(atomicSymbol1);
+    atomReplace = atomTypeNumber2 if atomTypeNumber2 != None else Constants.SymbolToAtomicNumber(atomicSymbol2);
+
+    atomTypeNumbers = structure.GetAtomTypeNumbers();
+
+    if atomFind not in atomTypeNumbers:
+        raise Exception("Error: The atom specified by atomTypeNumber1/atomicSymbol1 was not found in the supplied structure.");
+
+    if atomReplace in atomTypeNumbers:
+        raise Exception("Error: the atom specified by atomTypeNumber2/atomicSymbol2 was found in the supplied structure - this is most likely an error.");
+
+    # Define the substitution.
+
+    substitution = { };
+
+    if atomTypeNumber1 != None:
+        substitution['type_number_1'] = atomTypeNumber1;
+    else:
+        substitution['symbol_1'] = atomicSymbol1;
+
+    if atomTypeNumber2 != None:
+        substitution['type_number_2'] = atomTypeNumber2;
+    else:
+        substitution['symbol_2'] = atomicSymbol2;
+
+    # Count the number of atoms to substitute.
+
+    substitutionCount = 0;
+
+    for atomType in atomTypeNumbers:
+        if atomType == atomFind:
+            substitutionCount = substitutionCount + 1;
+
+    # Build the set of solid solutions by performing successive atomic substitutions.
+
+    _, solidSolutions = AtomicSubstitutions(
+        structure, [substitution] * substitutionCount,
+        printProgressUpdate = printProgressUpdate, tolerance = tolerance
+        );
+
+    # Return the result.
+
+    return solidSolutions;
+
+# atomicSubstitutions should be a list of dictionaries, each with one of 'type_number_1'/'symbol_1' and 'type_number_2'/'symbol2'.
+
+def AtomicSubstitutions(structure, atomicSubstitutions, storeIntermediate = None, printProgressUpdate = True, tolerance = None):
+    if storeIntermediate != None:
+        # If storeIntermediate is provided, sanity-check the indices.
+
+        for index in atomicSubstitutions:
+            if index > len(substitutions):
+                raise Exception("Error: If provided, indices in storeIntermediate must be between 0 and the number of substitutions specified by atomicSubstitutions.");
+    else:
+        # If not initialise it to an index array containing 0 (initial structure) and 1 .. N (all substitutions).
+
+        storeIntermediate = [0] + [i + 1 for i in range(0, len(atomicSubstitutions))];
+
+    # Compute the symmetry operations of the parent structure, needed for merging.
+
+    parentSymmetryOperations = structure.GetSymmetryOperations();
+
+    # Variables to keep track of the current set of structures and associated degeneracies.
+
+    currentStructures = [structure];
+    currentDegeneracies = [1];
+
+    # Store intermediate structure sets obtained after applying substitutions if required.
+
+    intermediateStructures = [];
+
+    if 0 in storeIntermediate:
+        intermediateStructures.append(
+            StructureTools.GroupStructuresBySpacegroup(currentStructures, currentDegeneracies)
+            );
+
+    # Keep track of the expected number of permutations expected at each substitution.
+
+    permutationCounts = [1];
+
+    # Perform each substitution in sequence.
+
+    for i, substitution in enumerate(atomicSubstitutions):
+        # Check input.
+
+        if ('type_number_1' not in substitution and 'symbol_1' not in substitution) or ('type_number_2' not in substitution and 'symbol_2' not in substitution):
+            raise Exception("Error: One each of 'type_number_1'/'symbol_1' and 'type_number_2'/'symbol_2' must be supplied for each substitution.");
+
+        if ('type_number_1' in substitution and 'symbol_1' in substitution) or ('type_number_2' in substitution and 'symbol_2' in substitution):
+            warnings.warn("When both 'type_number_*' and 'symbol_*' are supplied, the type number takes precedence.", UserWarning);
+
+        atomTypeNumber1, atomTypeNumber2 = None, None;
+
+        # Establish the atom-type numbers to find and replace.
+
+        if 'type_number_1' in substitution:
+            atomTypeNumber1 = substitution['type_number_1'];
+        else:
+            atomTypeNumber1 = Constants.SymbolToAtomicNumber(substitution['symbol_1']);
+
+        # Sanity check.
+
+        if atomTypeNumber1 == None:
+            raise Exception("Error: The atom-type number/symbol of the atom to substitute cannot be set to None.");
+
+        if 'type_number_2' in substitution:
+            atomTypeNumber2 = substitution['type_number_2'];
+        else:
+            atomTypeNumber2 = Constants.SymbolToAtomicNumber(substitution['symbol_2']);
+
+        if printProgressUpdate:
+            print("AtomicSubstitutions(): Performing substitution {0} ({1} -> {2})".format(i + 1, substitution['symbol_1'] if 'symbol_1' in substitution else atomTypeNumber1, substitution['symbol_2'] if 'symbol_2' in substitution else atomTypeNumber2));
+            print("AtomicSubstitutions(): Initial structure set contains {0} structure(s)".format(len(currentStructures)));
+
+        newStructures, newDegeneracies = [], [];
+
+        for structure, degeneracy in zip(currentStructures, currentDegeneracies):
+            atomTypeNumbers = structure.GetAtomTypeNumbers();
+
+            # Get the indices and site degeneracies of the unique atoms in the structure.
+
+            uniqueAtomIndices, siteDegeneracies = structure.GetUniqueAtomIndices();
+
+            for atomIndex, siteDegeneracy in zip(uniqueAtomIndices, siteDegeneracies):
+                if atomTypeNumbers[atomIndex] == atomTypeNumber1:
+                    # Clone the structure.
+
+                    newStructure = structure.Clone();
+
+                    # Perform the substitution.
+
+                    newStructure.SetAtom(atomIndex, atomTypeNumber = atomTypeNumber2);
+
+                    # Add the new structure to the list.
+
+                    newStructures.append(newStructure);
+
+                    # For "book keeping", the degeneracy of the substitution is the degeneracy of the original structure multiplied by the degeneracy of the substituted site.
+
+                    newDegeneracies.append(degeneracy * siteDegeneracy);
+
+        if printProgressUpdate:
+            print("AtomicSubstitutions(): Substituted structure set contains {0} structure(s)".format(len(newStructures)));
+
+        # Merge the new structure set.
+
+        numStructures = len(newStructures);
+
+        # Disable comparing lattice vectors and atom types to avoid unnecessary comparisons.
+
+        newStructures, newDegeneracies = StructureTools.MergeStructureSet(
+            newStructures, newDegeneracies, parentSymmetryOperations = parentSymmetryOperations, tolerance = tolerance,
+            compareLatticeVectors = False, compareAtomTypes = False
+            );
+
+        reductionCount = numStructures - len(newStructures);
+
+        if printProgressUpdate:
+            print("AtomicSubstitutions(): Merging removed {0} structure(s)".format(reductionCount));
+
+        # Check whether a progress update has been requested or we need to store this set of intermediate results.
+        # If neither, we can avoid sorting the structures by spacegroup, and hence a potentially-large number of spglib calls.
+
+        if printProgressUpdate or i + 1 in storeIntermediate:
+            # Group the new structures by spacegroup.
+
+            spacegroupGroups = StructureTools.GroupStructuresBySpacegroup(newStructures, newDegeneracies);
+
+            # If printProgressUpdate is set, print a summary of the spacegroupGroups.
+
+            if printProgressUpdate:
+                print("");
+
+                PrintSpacegroupGroupSummary(spacegroupGroups);
+
+            # Store the result.
+
+            intermediateStructures.append(spacegroupGroups);
+
+        # Update the permutation count; all structures should have the same composition -> take the atom-type numbers from the first one.
+
+        atomTypes = currentStructures[0].GetAtomTypeNumbers();
+
+        atomCount = 0;
+
+        for atomType in atomTypes:
+            if atomType == atomTypeNumber1:
+                atomCount = atomCount + 1;
+
+        permutationCounts.append(
+            permutationCounts[-1] * atomCount
+            );
+
+        # Update the current structure set/degeneracies.
+
+        currentStructures, currentDegeneracies = newStructures, newDegeneracies;
+
+    # If printProgressUpdate is set, print a final summary.
+
+    if printProgressUpdate:
+        print("AtomicSubstitutions(): All substitutions performed.");
+        print("")
+
+        # Prepend [None] to atomicSubstitutions for printing the "zeroth" operation (initial structure).
+
+        _AtomicSubstitutions_PrintResultSummary([None] + atomicSubstitutions, intermediateStructures, permutationCounts, storeIntermediate);
+
+    # After all substitutions have been performed, currentStructures and currentDegeneracies contain the result of the last substitution, and intermediateStructures contains the intermediate results at each step grouped by spacegroup.
+
+    return ((currentStructures, currentDegeneracies), intermediateStructures);
+
+def _AtomicSubstitutions_PrintResultSummary(substitutions, intermediateStructures, permutationCounts, storeIntermediate):
+    # Find the largest permutation count (= maximum integer value to be printed), and get the length of the text fields.
+
+    fieldLength = max(
+        len("{0:,}".format(max(permutationCounts))), 15
+        );
+
+    # Format and print header row.
+
+    headerRowFormatCode = "{{0: ^16}} | {{1: ^{0}}} | {{2: ^{0}}} | {{3: ^{0}}}".format(fieldLength);
+
+    headerRow = headerRowFormatCode.format("Substitution", "# Structures", "sum(Degeneracy)", "Permutations");
+
+    print(headerRow);
+    print('-' * len(headerRow));
+
+    # Generate and print table rows.
+
+    # Depending on the indices in storeIntermediate, the data rows will contain different items of data, making generating the formatted rows somewhat complex.
+    # This is the main reason for separating out the formatting code into a separate, private function.
+
+    dataRowFormatCode = "{{0: <3}} {{1: <4}} {{2: <2}} {{3: <4}} | {{4: >{0}}} | {{5: >{0}}} | {{6: >{0}}}".format(fieldLength);
+
+    intermediateStructuresPointer = 0;
+
+    for i, substitution in enumerate(substitutions):
+        # The first element of substitutions will be None (input structure; no substitution).
+        # The remainder will contain the target/substituted elements in each round of substitution.
+
+        dataRowData = [i];
+
+        if substitution == None:
+            dataRowData = dataRowData + ["None", "", ""];
+        else:
+            dataRowData = dataRowData + [
+                substitution['type_number_1'] if 'type_number_1' in substitution else substitution['symbol_1'],
+                "->",
+                substitution['type_number_2'] if 'type_number_2' in substitution else substitution['symbol_2']
+                ];
+
+        # intermediateStructures will contain a set of structures, grouped by spacegroup, for each index in storeIntermediate.
+
+        if i in storeIntermediate:
+            # If intermediate structures following the current substitution were captured, display the number of unique structures along the sum of the degeneracies to compare to the expected number of permutations.
+
+            spacegroupGroups = intermediateStructures[intermediateStructuresPointer];
+
+            # Sum up the number of structures in each group.
+
+            structureCount = sum(
+                len(structures) for structures, _ in spacegroupGroups.values()
+                );
+
+            # Sum the degeneracies of each structure.
+
+            degeneracySum = sum(
+                sum(degeneracies) for _, degeneracies in spacegroupGroups.values()
+                );
+
+            dataRowData = dataRowData + [
+                "{0:,}".format(structureCount),
+                "{0:,}".format(degeneracySum),
+                "{0:,}".format(permutationCounts[i]),
+                ];
+
+            intermediateStructuresPointer = intermediateStructuresPointer + 1;
+        else:
+            # If not, print only the expected number of permutations.
+
+            dataRowData = dataRowData + ["-", "-", "{0:,}".format(permutationCounts[i])];
+
+        print(dataRowFormatCode.format(*dataRowData));
+
+    print("");
+
+
+# ----------------------
+# Batch Export Functions
+# ----------------------
+
+def ExportAtomicSubstitutionResultSet(resultSet, prefix = None, atomicSymbolLookupTable = None, workingDirectory = "./"):
+    # If workingDirectory does not exist, create it.
+
+    if not os.path.isdir(workingDirectory):
+        os.makedirs(workingDirectory);
+
+    # Loop over items in the result set.
+
+    for i, spacegroupGroups in enumerate(resultSet):
+        # Sort the spacegropup keys and reorder them to descending symmetry order.
+
+        keys = sorted(spacegroupGroups.keys())[::-1];
+
+        # Determine a chemical formula.
+        # We assume here that the supplied resultSet has come from one of the routines in this module, and thus that all structures in each set of spacegroup groups have the same composition.
+
+        structures, _ = spacegroupGroups[keys[0]];
+
+        chemicalFormula = structures[0].GetChemicalFormula(atomicSymbolLookupTable = atomicSymbolLookupTable);
+
+        # Build a name for the archive.
+
+        # If a prefix has been set, start with that.
+
+        archiveName = "{0}_".format(prefix) if prefix != None else "";
+
+        # If there are multiple result sets, include the substitution number in the name.
+
+        if len(resultSet) > 1:
+            archiveName = archiveName + "{0:0>3}_".format(i + 1);
+
+        # Finally, append the chemical formula and the file extension.
+
+        archiveName = archiveName + chemicalFormula;
+
+        # Calculate the common divisor to normalise the degeneracies.
+
+        mergedDegeneracies = [];
+
+        for key in keys:
+            _, degeneracies = spacegroupGroups[key];
+            mergedDegeneracies = mergedDegeneracies + degeneracies;
+
+        commonDivisor = GetCommonDivisor(mergedDegeneracies);
+
+        # Output and archive the structures.
+
+        with tarfile.open(os.path.join(workingDirectory, "{0}.tar.gz".format(archiveName)), 'w:gz') as archiveFile:
+            for key in keys:
+                spacegroupNumber, spacegroupSymbol = key;
+
+                # The structures will be divided into spacegroup subfolders.
+
+                subfolderName = "{0}-{1}".format(
+                    spacegroupNumber, spacegroupSymbol.replace('/', '_')
+                    );
+
+                structures, degeneracies = spacegroupGroups[key];
+
+                # Write each structure to a POSCAR file and add to the archive.
+
+                for i, (structure, degeneracy) in enumerate(zip(structures, degeneracies)):
+                    # Give each structure a title line that includes the chemical formula, spacegroup and normalised degeneracy.
+
+                    structure.SetName(
+                        "{0} : SG = {1} ({2}), rel. weight = {3}".format(chemicalFormula, spacegroupNumber, spacegroupSymbol, degeneracy // commonDivisor)
+                        );
+
+                    # Generate a file name from the chemical formula, spacegroup number and structure number.
+
+                    fileName = "{0}_SG-{1}_{2:0>3}.vasp".format(chemicalFormula, spacegroupNumber, i + 1);
+
+                    IO.WritePOSCARFile(structure, fileName);
+
+                    archiveFile.add(
+                        fileName, arcname = "{0}/{1}/{2}".format(archiveName, subfolderName, fileName)
+                        );
+
+                    # Delete the temporary file once added to the archive.
+
+                    os.remove(fileName);
+
+
+# ------------------
+# Printing Functions
+# ------------------
+
+def PrintSpacegroupGroupSummary(spacegroupGroups):
+    # Sort the dictionary keys.
+    # The first element of the key tuples is the spacegroup number, so sorting will put the keys ascending symmetry order.
+    # It's more intuitive to print the table rows in order of descending symmetry, so we reverse the list.
+
+    keys = sorted(spacegroupGroups.keys())[::-1];
+
+    # Obtain the number of structures and the sum of the degeneracies in each group.
+
+    structureCounts, degeneracySums = [], [];
+
+    for key in keys:
+        structures, degeneracies = spacegroupGroups[key];
+
+        structureCounts.append(len(structures));
+        degeneracySums.append(sum(degeneracies));
+
+    # Work out the maximum integer value to be printed, and hence the required length of the formatted text field.
+
+    maxValue = max(
+        max(structureCounts), max(degeneracySums)
+        );
+
+    fieldLength = max(
+        len("{0:,}".format(maxValue)), 16
+        );
+
+    # Print a summary table.
+
+    headerRowFormatCode = "{{0: ^16}} | {{1: ^{0}}} | {{2: ^{0}}}".format(fieldLength);
+
+    headerRow = headerRowFormatCode.format("Spacegroup", "# Structures", "# Unique");
+
+    print(headerRow);
+    print('-' * len(headerRow));
+
+    dataRowFormatCode = "{{0: <3}} {{1: <12}} | {{2: >{0},}} | {{3: >{0},}}".format(fieldLength);
+
+    for key, structureCount, degeneracySum in zip(keys, structureCounts, degeneracySums):
+        spacegroupNumber, spacegroupSymbol = key;
+        print(dataRowFormatCode.format(spacegroupNumber, spacegroupSymbol, degeneracySum,  structureCount));
+
+    print("");
+
+
+# ----------------------
+# Misc Utility Functions
+# ----------------------
+
+def GetCommonDivisor(integers):
+    commonDivisor = 1;
+
+    hasDivisor = True;
+
+    while hasDivisor:
+        # Iteratively divide through by the smallest value until the common divisor found.
+
+        divisor = min(integers);
+
+        if divisor == 1:
+            break;
+
+        for value in integers:
+            if value % divisor != 0:
+                hasDivisor = False;
+                break;
+
+        if hasDivisor:
+            commonDivisor = commonDivisor * divisor;
+            integers = [integer // divisor for integer in integers];
+
+    return commonDivisor;
