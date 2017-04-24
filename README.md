@@ -11,5 +11,5 @@ The core algorithms make use of crystal symmetry (via `spglib`[1]) to reduce the
 References
 ==========
 
-[1] [https://atztogo.github.io/spglib/](https://atztogo.github.io/spglib/)
-[2] [http://www.numpy.org/](http://www.numpy.org/)
+1. [https://atztogo.github.io/spglib/](https://atztogo.github.io/spglib/)
+2. [http://www.numpy.org/](http://www.numpy.org/)
