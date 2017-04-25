@@ -61,7 +61,7 @@ PrintSpacegroupGroupSummary(resultSet[1]);
 print("After second substitution:");
 print("");
 
-# This summary table should show one unique I-42m and one I-4 structure, which correspond to the Stannite and Kesterite structures of CZTS; are both listed in a COD search for Cu-Zn-Sn-S4.
+# This summary table should show one unique I-42m and one I-4 structure, which correspond to the Stannite and Kesterite structures of CZTS; are both listed in a COD search for Cu-Zn-Sn-S.
 
 PrintSpacegroupGroupSummary(resultSet[2]);
 

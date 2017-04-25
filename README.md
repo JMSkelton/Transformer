@@ -23,9 +23,9 @@ Examples
 At present, apart from inline comments in the code files, `Transformer` has not been fully documented.
 However, the [Examples](./Examples) folder contains a few examples illustrating how to perform common functions:
 
-1. [Antisite defects in Cu<sub>2</sub>ZnSnS<sub>4</sub>](./Examples/Exampls_CZTS-AntisiteDefects.py): Generate configurations with 1-4 antisite defects in a 2&times;2&times;1 supercell of kesterite Cu<sub>2</sub>ZnSnS<sub>4</sub>.
+1. [Antisite defects in Cu<sub>2</sub>ZnSnS<sub>4</sub>](./Examples/Example_CZTS-AntisiteDefects.py): Generate configurations with 1-4 antisite defects in a 2&times;2&times;1 supercell of kesterite Cu<sub>2</sub>ZnSnS<sub>4</sub>.
 
-2. [ZnS "cation mutation"](./Examples/Example_ZnS-CationMutation.py): Starting from a 1&times;1&times;2 supercell expansion of the conventional ZnS cell, generate CuGaS and Stannite/Kesterite Cu<sub>2</sub>ZnSnS<sub>4</sub> by successive cation substitutions.
+2. [ZnS "cation mutation"](./Examples/Example_ZnS-CationMutation.py): Starting from a 1&times;1&times;2 supercell expansion of the conventional ZnS cell, generate CuGaS<sub>2</sub> and Stannite/Kesterite Cu<sub>2</sub>ZnSnS<sub>4</sub> by successive cation substitutions.
 
 References
 ==========
