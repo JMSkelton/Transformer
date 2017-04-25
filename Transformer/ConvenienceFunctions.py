@@ -1,4 +1,4 @@
-# Transformer/ConvenienceFunctions.py by J. M. SKelton
+# Transformer/ConvenienceFunctions.py by J. M. Skelton
 
 
 # -------
@@ -11,6 +11,7 @@ import warnings;
 
 from Transformer import Constants;
 from Transformer import IO;
+from Transformer import Structure;
 from Transformer import StructureTools;
 
 
@@ -18,45 +19,142 @@ from Transformer import StructureTools;
 # Convenience Functions
 # ---------------------
 
-def AnitsiteDefects(structure, atomTypeNumber1, atomicSymbol1, atomTypeNumber2, atomicSymbol2, printProgressUpdate = True, tolerance = None):
-    pass; # TODO!
+def AntisiteDefects(structure, atom1, atom2, numDefects = None, printProgressUpdate = True, tolerance = None):
+    # Convert atom1 and atom2 to atom-type numbers.
 
-def SchottkyDefects(structure, defectAtoms, printProgressUpdate = True, tolerance = None):
-    pass; # TODO!
+    atomTypeNumber1 = Structure.AtomTypeToAtomTypeNumber(atom1);
+    atomTypeNumber2 = Structure.AtomTypeToAtomTypeNumber(atom2);
 
-def SolidSolution(structure, atomTypeNumber1 = None, atomicSymbol1 = None, atomTypeNumber2 = None, atomicSymbol2 = None, printProgressUpdate = True, tolerance = None):
-    # Check input.
-
-    if (atomTypeNumber1 == None and atomicSymbol1 == None) or (atomTypeNumber2 == None and atomicSymbol2 == None):
-        raise Exception("Error: One each of atomTypeNumber1/atomicSymbol1 and atomTypeNumber2/atomicSymbol2 must be set.");
-
-    if (atomTypeNumber1 != None and atomicSymbol1 != None) or (atomTypeNumber2 != None and atomicSymbol2 != None):
-        warnings.warn("When both atomTypeNumber* and atomicSymbol* are supplied, atomTypeNumber* takes precedence.", UserWarning);
-
-    atomFind = atomTypeNumber1 if atomTypeNumber1 != None else Constants.SymbolToAtomicNumber(atomicSymbol1);
-    atomReplace = atomTypeNumber2 if atomTypeNumber2 != None else Constants.SymbolToAtomicNumber(atomicSymbol2);
+    # Count the number of both atoms in the structure.
 
     atomTypeNumbers = structure.GetAtomTypeNumbers();
+
+    # Sanity check.
+
+    if atomTypeNumber1 == atomTypeNumber2:
+        raise Exception("Error: atom1 and atom2 have the same atom-type number - this is most likely an error.");
+
+    if atomTypeNumber1 not in atomTypeNumbers or atomTypeNumber2 not in atomTypeNumbers:
+        raise Exception("Error: One of both of atom1/atom2 were not found in the supplied structure.");
+
+    atomCount1, atomCount2 = 0, 0;
+
+    for atomTypeNumber in atomTypeNumbers:
+        if atomTypeNumber == atomTypeNumber1:
+            atomCount1 = atomCount1 + 1;
+        elif atomTypeNumber == atomTypeNumber2:
+            atomCount2 = atomCount2 + 1;
+
+    # The maximum number of possible antisite defects the minimum of atomCount1 and atomCount2.
+
+    maxNumDefects = min(atomCount1, atomCount2);
+
+    # If numDefects is provided, check it; if not, set it to maxNumDefects.
+
+    if numDefects != None:
+        if numDefects > maxNumDefects:
+            raise Exception("Error: If provided, numDefects cannot be greater than the number of either of atom1/atom2 in the supplied structure.");
+    else:
+        numDefects = maxNumDefects;
+
+    # When making the substitutions, to avoid reversing earlier substitutions when creating multiple defects, we swap atom1 and atom2 for the arbitrary placeholder symbols.
+
+    # Select a pair of atom-type numbers as placeholders.
+
+    placeholder1, placeholder2 = None, None;
+
+    trialTypeNumber = -1;
+
+    while True:
+        if trialTypeNumber not in atomTypeNumbers:
+            placeholder1 = trialTypeNumber;
+            break;
+
+        trialTypeNumber = trialTypeNumber - 1;
+
+    trialTypeNumber = trialTypeNumber - 1;
+
+    while True:
+        if trialTypeNumber not in atomTypeNumbers:
+            placeholder2 = trialTypeNumber;
+            break;
+
+        trialTypeNumber = trialTypeNumber - 1;
+
+    # Collect structures with antisite defects by performing a sequence of substitutions where we swap atom1 -> 1 and atom2 -> 2.
+
+    _, antisiteDefects = AtomicSubstitutions(
+        structure, [(atom1, placeholder1), (atom2, placeholder2)] * numDefects,
+        storeIntermediate = [i for i in range(0, 2 * numDefects + 1, 2)], printProgressUpdate = printProgressUpdate, tolerance = tolerance
+        );
+
+    # Modify the substituted structures in the result set to swap the placeholders for 1 -> atom2 and 2 -> atom1.
+    # After doing so, regenerate the spacegroup groupings and check for duplicate structures.
+    # [I couldn't decide whether the second step was actually needed, so I did it anyway, to be on the safe side...!]
+
+    for i, spacegroupGroups in enumerate(antisiteDefects[1:]):
+        if printProgressUpdate:
+            print("AntisiteDefects(): Post processing defect set {0}.".format(i + 1));
+            print("");
+
+        # Merge the structures and degeneracies in the spacegroup groups into a "flat" lists.
+
+        structuresFlat, degeneraciesFlat = [], [];
+
+        for structures, degeneracies in spacegroupGroups.values():
+            for structure in structures:
+                structuresFlat.append(
+                    structure.GetAtomSwap(placeholder1, atom2).GetAtomSwap(placeholder2, atom1)
+                    );
+
+            degeneraciesFlat = degeneraciesFlat + degeneracies;
+
+        numStructures = len(structuresFlat);
+
+        # Perform a final merge.
+
+        structuresFlat, degeneraciesFlat = StructureTools.MergeStructureSet(
+            structuresFlat, degeneraciesFlat,
+            parentSymmetryOperations = structure.GetSymmetryOperations(), tolerance = tolerance,
+            compareLatticeVectors = False, compareAtomTypes = False
+            );
+
+        reductionCount = len(structuresFlat) - numStructures;
+
+        if printProgressUpdate and reductionCount > 0:
+            print("AntisiteDefects(): Final merge removed {0} structure(s)".format(reductionCount));
+            print("");
+
+        # Regroup the structures.
+
+        spacegroupGroups = StructureTools.GroupStructuresBySpacegroup(structuresFlat, degeneraciesFlat);
+
+        if printProgressUpdate:
+            PrintSpacegroupGroupSummary(spacegroupGroups);
+
+        # Update the results.
+
+        antisiteDefects[i + 1] = spacegroupGroups;
+
+    # Return the result.
+
+    return antisiteDefects;
+
+def SolidSolution(structure, atom1, atom2, printProgressUpdate = True, tolerance = None):
+    # Convert atom1 and atom2 to atom-type numbers.
+
+    atomFind = Structure.AtomTypeToAtomTypeNumber(atom1);
+    atomReplace = Structure.AtomTypeToAtomTypeNumber(atom2);
+
+    atomTypeNumbers = structure.GetAtomTypeNumbers();
+
+    # Sanity checks.
 
     if atomFind not in atomTypeNumbers:
         raise Exception("Error: The atom specified by atomTypeNumber1/atomicSymbol1 was not found in the supplied structure.");
 
     if atomReplace in atomTypeNumbers:
         raise Exception("Error: the atom specified by atomTypeNumber2/atomicSymbol2 was found in the supplied structure - this is most likely an error.");
-
-    # Define the substitution.
-
-    substitution = { };
-
-    if atomTypeNumber1 != None:
-        substitution['type_number_1'] = atomTypeNumber1;
-    else:
-        substitution['symbol_1'] = atomicSymbol1;
-
-    if atomTypeNumber2 != None:
-        substitution['type_number_2'] = atomTypeNumber2;
-    else:
-        substitution['symbol_2'] = atomicSymbol2;
 
     # Count the number of atoms to substitute.
 
@@ -69,7 +167,7 @@ def SolidSolution(structure, atomTypeNumber1 = None, atomicSymbol1 = None, atomT
     # Build the set of solid solutions by performing successive atomic substitutions.
 
     _, solidSolutions = AtomicSubstitutions(
-        structure, [substitution] * substitutionCount,
+        structure, [(atom1, atom2)] * substitutionCount,
         printProgressUpdate = printProgressUpdate, tolerance = tolerance
         );
 
@@ -77,14 +175,12 @@ def SolidSolution(structure, atomTypeNumber1 = None, atomicSymbol1 = None, atomT
 
     return solidSolutions;
 
-# atomicSubstitutions should be a list of dictionaries, each with one of 'type_number_1'/'symbol_1' and 'type_number_2'/'symbol2'.
-
 def AtomicSubstitutions(structure, atomicSubstitutions, storeIntermediate = None, printProgressUpdate = True, tolerance = None):
     if storeIntermediate != None:
         # If storeIntermediate is provided, sanity-check the indices.
 
-        for index in atomicSubstitutions:
-            if index > len(substitutions):
+        for index in storeIntermediate:
+            if index > len(atomicSubstitutions):
                 raise Exception("Error: If provided, indices in storeIntermediate must be between 0 and the number of substitutions specified by atomicSubstitutions.");
     else:
         # If not initialise it to an index array containing 0 (initial structure) and 1 .. N (all substitutions).
@@ -116,35 +212,20 @@ def AtomicSubstitutions(structure, atomicSubstitutions, storeIntermediate = None
     # Perform each substitution in sequence.
 
     for i, substitution in enumerate(atomicSubstitutions):
-        # Check input.
+        # Get the atom-type numbers of the atoms to find and replace.;
 
-        if ('type_number_1' not in substitution and 'symbol_1' not in substitution) or ('type_number_2' not in substitution and 'symbol_2' not in substitution):
-            raise Exception("Error: One each of 'type_number_1'/'symbol_1' and 'type_number_2'/'symbol_2' must be supplied for each substitution.");
+        atomType1, atomType2 = substitution;
 
-        if ('type_number_1' in substitution and 'symbol_1' in substitution) or ('type_number_2' in substitution and 'symbol_2' in substitution):
-            warnings.warn("When both 'type_number_*' and 'symbol_*' are supplied, the type number takes precedence.", UserWarning);
-
-        atomTypeNumber1, atomTypeNumber2 = None, None;
-
-        # Establish the atom-type numbers to find and replace.
-
-        if 'type_number_1' in substitution:
-            atomTypeNumber1 = substitution['type_number_1'];
-        else:
-            atomTypeNumber1 = Constants.SymbolToAtomicNumber(substitution['symbol_1']);
+        atomTypeNumber1 = Structure.AtomTypeToAtomTypeNumber(atomType1);
+        atomTypeNumber2 = Structure.AtomTypeToAtomTypeNumber(atomType2);
 
         # Sanity check.
 
         if atomTypeNumber1 == None:
             raise Exception("Error: The atom-type number/symbol of the atom to substitute cannot be set to None.");
 
-        if 'type_number_2' in substitution:
-            atomTypeNumber2 = substitution['type_number_2'];
-        else:
-            atomTypeNumber2 = Constants.SymbolToAtomicNumber(substitution['symbol_2']);
-
         if printProgressUpdate:
-            print("AtomicSubstitutions(): Performing substitution {0} ({1} -> {2})".format(i + 1, substitution['symbol_1'] if 'symbol_1' in substitution else atomTypeNumber1, substitution['symbol_2'] if 'symbol_2' in substitution else atomTypeNumber2));
+            print("AtomicSubstitutions(): Performing substitution {0} ({1} -> {2})".format(i + 1, atomType1, atomType2));
             print("AtomicSubstitutions(): Initial structure set contains {0} structure(s)".format(len(currentStructures)));
 
         newStructures, newDegeneracies = [], [];
@@ -164,7 +245,7 @@ def AtomicSubstitutions(structure, atomicSubstitutions, storeIntermediate = None
 
                     # Perform the substitution.
 
-                    newStructure.SetAtom(atomIndex, atomTypeNumber = atomTypeNumber2);
+                    newStructure.SetAtom(atomIndex, atomTypeNumber2);
 
                     # Add the new structure to the list.
 
@@ -190,7 +271,7 @@ def AtomicSubstitutions(structure, atomicSubstitutions, storeIntermediate = None
 
         reductionCount = numStructures - len(newStructures);
 
-        if printProgressUpdate:
+        if printProgressUpdate and reductionCount > 0:
             print("AtomicSubstitutions(): Merging removed {0} structure(s)".format(reductionCount));
 
         # Check whether a progress update has been requested or we need to store this set of intermediate results.
@@ -208,9 +289,10 @@ def AtomicSubstitutions(structure, atomicSubstitutions, storeIntermediate = None
 
                 PrintSpacegroupGroupSummary(spacegroupGroups);
 
-            # Store the result.
+            # Store the result if required.
 
-            intermediateStructures.append(spacegroupGroups);
+            if i + 1 in storeIntermediate:
+                intermediateStructures.append(spacegroupGroups);
 
         # Update the permutation count; all structures should have the same composition -> take the atom-type numbers from the first one.
 
@@ -278,11 +360,9 @@ def _AtomicSubstitutions_PrintResultSummary(substitutions, intermediateStructure
         if substitution == None:
             dataRowData = dataRowData + ["None", "", ""];
         else:
-            dataRowData = dataRowData + [
-                substitution['type_number_1'] if 'type_number_1' in substitution else substitution['symbol_1'],
-                "->",
-                substitution['type_number_2'] if 'type_number_2' in substitution else substitution['symbol_2']
-                ];
+            atomType1, atomType2 = substitution;
+
+            dataRowData = dataRowData + [atomType1, "->", atomType2];
 
         # intermediateStructures will contain a set of structures, grouped by spacegroup, for each index in storeIntermediate.
 

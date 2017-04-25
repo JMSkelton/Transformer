@@ -1,4 +1,4 @@
-# Transformer/Constants.py by J. M. SKelton
+# Transformer/Constants.py by J. M. Skelton
 
 
 # --------------

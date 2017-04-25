@@ -1,0 +1,9 @@
+# Python cache files.
+
+Transformer/*.pyc
+Transformer/__pycache__/
+
+# Test folder.
+
+Test/
+

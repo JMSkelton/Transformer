@@ -1,0 +1,208 @@
+AtomicSubstitutions(): Performing substitution 1 (Zn -> Cu)
+AtomicSubstitutions(): Initial structure set contains 1 structure(s)
+AtomicSubstitutions(): Substituted structure set contains 1 structure(s)
+
+   Spacegroup    |   # Structures   |     # Unique    
+------------------------------------------------------
+111 P-42m        |                8 |                1
+
+AtomicSubstitutions(): Performing substitution 2 (Zn -> Cu)
+AtomicSubstitutions(): Initial structure set contains 1 structure(s)
+AtomicSubstitutions(): Substituted structure set contains 4 structure(s)
+
+   Spacegroup    |   # Structures   |     # Unique    
+------------------------------------------------------
+215 P-43m        |                8 |                1
+121 I-42m        |                8 |                1
+115 P-4m2        |                8 |                1
+17  P222_1       |               32 |                1
+
+AtomicSubstitutions(): Performing substitution 3 (Zn -> Cu)
+AtomicSubstitutions(): Initial structure set contains 4 structure(s)
+AtomicSubstitutions(): Substituted structure set contains 9 structure(s)
+AtomicSubstitutions(): Merging removed 5 structure(s)
+
+   Spacegroup    |   # Structures   |     # Unique    
+------------------------------------------------------
+111 P-42m        |               48 |                1
+81  P-4          |               96 |                1
+35  Cmm2         |               96 |                1
+16  P222         |               96 |                1
+
+AtomicSubstitutions(): Performing substitution 4 (Zn -> Cu)
+AtomicSubstitutions(): Initial structure set contains 4 structure(s)
+AtomicSubstitutions(): Substituted structure set contains 14 structure(s)
+AtomicSubstitutions(): Merging removed 6 structure(s)
+
+   Spacegroup    |   # Structures   |     # Unique    
+------------------------------------------------------
+122 I-42d        |               96 |                1
+115 P-4m2        |              240 |                3
+113 P-42_1m      |              192 |                1
+112 P-42c        |              192 |                1
+111 P-42m        |              192 |                1
+3   P2           |              768 |                1
+
+AtomicSubstitutions(): Performing substitution 5 (Zn -> Ga)
+AtomicSubstitutions(): Initial structure set contains 8 structure(s)
+AtomicSubstitutions(): Substituted structure set contains 14 structure(s)
+
+   Spacegroup    |   # Structures   |     # Unique    
+------------------------------------------------------
+111 P-42m        |              192 |                1
+81  P-4          |            1,152 |                3
+35  Cmm2         |            1,152 |                3
+16  P222         |            1,152 |                3
+3   P2           |            3,072 |                4
+
+AtomicSubstitutions(): Performing substitution 6 (Zn -> Ga)
+AtomicSubstitutions(): Initial structure set contains 14 structure(s)
+AtomicSubstitutions(): Substituted structure set contains 33 structure(s)
+AtomicSubstitutions(): Merging removed 9 structure(s)
+
+   Spacegroup    |   # Structures   |     # Unique    
+------------------------------------------------------
+121 I-42m        |              192 |                1
+115 P-4m2        |              192 |                1
+113 P-42_1m      |              768 |                2
+112 P-42c        |              768 |                2
+111 P-42m        |            1,344 |                4
+82  I-4          |              384 |                1
+25  Pmm2         |              384 |                1
+17  P222_1       |            2,304 |                3
+3   P2           |           13,824 |                9
+
+AtomicSubstitutions(): Performing substitution 7 (Zn -> Ga)
+AtomicSubstitutions(): Initial structure set contains 24 structure(s)
+AtomicSubstitutions(): Substituted structure set contains 33 structure(s)
+AtomicSubstitutions(): Merging removed 19 structure(s)
+
+   Spacegroup    |   # Structures   |     # Unique    
+------------------------------------------------------
+111 P-42m        |            1,152 |                1
+81  P-4          |            6,912 |                3
+35  Cmm2         |            6,912 |                3
+16  P222         |            6,912 |                3
+3   P2           |           18,432 |                4
+
+AtomicSubstitutions(): Performing substitution 8 (Zn -> Ga)
+AtomicSubstitutions(): Initial structure set contains 14 structure(s)
+AtomicSubstitutions(): Substituted structure set contains 14 structure(s)
+AtomicSubstitutions(): Merging removed 6 structure(s)
+
+   Spacegroup    |   # Structures   |     # Unique    
+------------------------------------------------------
+122 I-42d        |            2,304 |                1
+115 P-4m2        |            5,760 |                3
+113 P-42_1m      |            4,608 |                1
+112 P-42c        |            4,608 |                1
+111 P-42m        |            4,608 |                1
+3   P2           |           18,432 |                1
+
+AtomicSubstitutions(): Performing substitution 9 (Ga -> Zn)
+AtomicSubstitutions(): Initial structure set contains 8 structure(s)
+AtomicSubstitutions(): Substituted structure set contains 14 structure(s)
+
+   Spacegroup    |   # Structures   |     # Unique    
+------------------------------------------------------
+111 P-42m        |            4,608 |                1
+81  P-4          |           27,648 |                3
+35  Cmm2         |           27,648 |                3
+16  P222         |           27,648 |                3
+3   P2           |           73,728 |                4
+
+AtomicSubstitutions(): Performing substitution 10 (Ga -> Zn)
+AtomicSubstitutions(): Initial structure set contains 14 structure(s)
+AtomicSubstitutions(): Substituted structure set contains 33 structure(s)
+AtomicSubstitutions(): Merging removed 9 structure(s)
+
+   Spacegroup    |   # Structures   |     # Unique    
+------------------------------------------------------
+121 I-42m        |            4,608 |                1
+115 P-4m2        |            4,608 |                1
+113 P-42_1m      |           18,432 |                2
+112 P-42c        |           18,432 |                2
+111 P-42m        |           32,256 |                4
+82  I-4          |            9,216 |                1
+25  Pmm2         |            9,216 |                1
+17  P222_1       |           55,296 |                3
+3   P2           |          331,776 |                9
+
+AtomicSubstitutions(): Performing substitution 11 (Ga -> Sn)
+AtomicSubstitutions(): Initial structure set contains 24 structure(s)
+AtomicSubstitutions(): Substituted structure set contains 33 structure(s)
+
+   Spacegroup    |   # Structures   |     # Unique    
+------------------------------------------------------
+111 P-42m        |           27,648 |                3
+81  P-4          |           55,296 |                3
+35  Cmm2         |           55,296 |                3
+16  P222         |           55,296 |                3
+3   P2           |          774,144 |               21
+
+AtomicSubstitutions(): Performing substitution 12 (Ga -> Sn)
+AtomicSubstitutions(): Initial structure set contains 33 structure(s)
+AtomicSubstitutions(): Substituted structure set contains 33 structure(s)
+AtomicSubstitutions(): Merging removed 9 structure(s)
+
+   Spacegroup    |   # Structures   |     # Unique    
+------------------------------------------------------
+121 I-42m        |            9,216 |                1
+115 P-4m2        |            9,216 |                1
+113 P-42_1m      |           36,864 |                2
+112 P-42c        |           36,864 |                2
+111 P-42m        |           64,512 |                4
+82  I-4          |           18,432 |                1
+25  Pmm2         |           18,432 |                1
+17  P222_1       |          110,592 |                3
+3   P2           |          663,552 |                9
+
+AtomicSubstitutions(): All substitutions performed.
+
+  Substitution   |  # Structures   | sum(Degeneracy) |  Permutations  
+----------------------------------------------------------------------
+0   None         |               1 |               1 |               1
+1   Zn   -> Cu   |               - |               - |               8
+2   Zn   -> Cu   |               - |               - |              56
+3   Zn   -> Cu   |               - |               - |             336
+4   Zn   -> Cu   |               - |               - |           1,680
+5   Zn   -> Ga   |               - |               - |           6,720
+6   Zn   -> Ga   |               - |               - |          20,160
+7   Zn   -> Ga   |               - |               - |          40,320
+8   Zn   -> Ga   |               8 |          40,320 |          40,320
+9   Ga   -> Zn   |               - |               - |         161,280
+10  Ga   -> Zn   |               - |               - |         483,840
+11  Ga   -> Sn   |               - |               - |         967,680
+12  Ga   -> Sn   |              24 |         967,680 |         967,680
+
+Initial structure:
+
+   Spacegroup    |   # Structures   |     # Unique    
+------------------------------------------------------
+216 F-43m        |                1 |                1
+
+After first substitution:
+
+   Spacegroup    |   # Structures   |     # Unique    
+------------------------------------------------------
+122 I-42d        |            2,304 |                1
+115 P-4m2        |            5,760 |                3
+113 P-42_1m      |            4,608 |                1
+112 P-42c        |            4,608 |                1
+111 P-42m        |            4,608 |                1
+3   P2           |           18,432 |                1
+
+After second substitution:
+
+   Spacegroup    |   # Structures   |     # Unique    
+------------------------------------------------------
+121 I-42m        |            9,216 |                1
+115 P-4m2        |            9,216 |                1
+113 P-42_1m      |           36,864 |                2
+112 P-42c        |           36,864 |                2
+111 P-42m        |           64,512 |                4
+82  I-4          |           18,432 |                1
+25  Pmm2         |           18,432 |                1
+17  P222_1       |          110,592 |                3
+3   P2           |          663,552 |                9
+

@@ -1,4 +1,4 @@
-# Transformer/Structure.py by J. M. SKelton
+# Transformer/Structure.py by J. M. Skelton
 
 
 # -------
@@ -30,7 +30,7 @@ class Structure:
     # Constructor
     # -----------
 
-    def __init__(self, latticeVectors, atomPositions, atomTypeNumbers = None, atomicSymbols = None, name = None):
+    def __init__(self, latticeVectors, atomPositions, atomTypes, name = None):
         # Convert the lattice vectors to a NumPy array, check the shape, and store.
 
         latticeVectors = np.array(latticeVectors, dtype = np.float64);
@@ -42,19 +42,11 @@ class Structure:
 
         self._latticeVectors = latticeVectors;
 
-        # Check that one of atomTypeNumbers or atomicSymbols was supplied.
+        # Obtain a list of atom-type numbers.
 
-        if atomTypeNumbers == None:
-            if atomicSymbols == None:
-                raise Exception("Error: One of atomTypeNumbers or atomicSymbols must be supplied.");
-        else:
-            if atomicSymbols != None:
-                warnings.warn("When both atomTypeNumbers and atomicSymbols are supplied, atomTypeNumbers takes precedence.", UserWarning);
-
-        # If atomicSymbols is supplied instead of atomTypeNumbers, convert the symbols to atomic numbers.
-
-        if atomTypeNumbers == None:
-            atomTypeNumbers = [Constants.SymbolToAtomicNumber(symbol) for symbol in atomicSymbols];
+        atomTypeNumbers = [
+            AtomTypeToAtomTypeNumber(atomType) for atomType in atomTypes
+            ];
 
         # Check that the length of atomTypeNumbers/atomicSymbols is consistent with that of atomPositions.
 
@@ -164,7 +156,7 @@ class Structure:
     # Property Get*/Set* Methods
     # --------------------------
 
-    def SetAtom(self, index, atomTypeNumber = None, atomicSymbol = None, atomPosition = None):
+    def SetAtom(self, index, atomType, atomPosition = None):
         # Sanity check.
 
         numAtoms, = self._atoms.shape;
@@ -174,14 +166,9 @@ class Structure:
 
         atoms = self._atoms;
 
-        # If a symbol is supplied instead of an atom-type number, convert the symbol to an atomic number.
+        # Convert to atomType number to an atom-type number.
 
-        if atomTypeNumber == None:
-            if atomicSymbol != None:
-                atomTypeNumber = Constants.SymbolToAtomicNumber(atomicSymbol);
-        else:
-            if atomicSymbol != None:
-                warnings.warn("When both atomTypeNumber and atomicSymbol are supplied, atomTypeNumber takes precedence.", UserWarning);
+        atomTypeNumber = AtomTypeToAtomTypeNumber(atomType);
 
         if atomTypeNumber != None:
             # Substitute atom.
@@ -196,7 +183,7 @@ class Structure:
             atoms.sort();
         else:
             if atomPosition != None:
-                warnings.warn("When atomTypeNumber/atomicSymbol are set to None, the atom is removed and its position is not updated.", UserWarning);
+                warnings.warn("When atomType is set to None, the atom is removed and its position is not updated.", UserWarning);
 
             # Delete atom.
 
@@ -299,8 +286,7 @@ class Structure:
         # Given the conversions in the constructor, this should produce a deep copy -- at least of the lattice vectors, atom positions and atom-type numbers.
 
         return Structure(
-            self.GetLatticeVectors(), self.GetAtomPositions(),
-            atomTypeNumbers = self.GetAtomTypeNumbers(), name = self._name
+            self.GetLatticeVectors(), self.GetAtomPositions(), self.GetAtomTypeNumbers(), name = self._name
             );
 
     def CompareLatticeVectors(self, structure, tolerance = None):
@@ -464,8 +450,7 @@ class Structure:
         # Return a new Structure object with the new atom positions.
 
         return Structure(
-            self.GetLatticeVectors(), newAtomPositions,
-            self.GetAtomTypeNumbers()
+            self.GetLatticeVectors(), newAtomPositions, self.GetAtomTypeNumbers()
             );
 
     def GetSupercell(self, supercellDim):
@@ -473,7 +458,7 @@ class Structure:
 
         # Sanity check.
 
-        if dimA <= 1 or dimB <= 1 or dimC <= 1:
+        if dimA < 1 or dimB < 1 or dimC < 1:
             raise Exception("Error: Supercell dimensions must be >= 1.");
 
         if dimA % 1 != 0 or dimB % 1 != 0 or dimC % 1 != 0:
@@ -527,41 +512,18 @@ class Structure:
             # Return a new structure.
 
             return Structure(
-                newLatticeVectors, newAtomPositions,
-                atomTypeNumbers = newAtomTypeNumbers, name = newName
+                newLatticeVectors, newAtomPositions, newAtomTypeNumbers, name = newName
                 );
         else:
             # If dimA = dimB = dimC = 1, simply return a clone.
 
             return self.Clone();
 
-    def GetAtomSwap(self, atomTypeNumber1 = None, atomicSymbol1 = None, atomTypeNumber2 = None, atomicSymbol2 = None):
-        # If both atomTypeNumber* and atomicSymbol* are supplied, we should issue a warning, but we only want to do so once.
+    def GetAtomSwap(self, atomType1, atomType2):
+        # Convert atomType1 and atomType2 to atom-type numbers.
 
-        issueWarning = False;
-
-        # Sanity check: one of atomTypeNumber1 or atomicSymbol1 must be supplied.
-
-        if atomTypeNumber1 == None:
-            # If a symbol is supplied instead of an atom-type number, convert it to an atomic number.
-
-            if atomicSymbol1 != None:
-                atomTypeNumber1 = Constants.SymbolToAtomicNumber(atomicSymbol1);
-            else:
-                raise Exception("Error: One of atomTypeNumber1 or atomicSymbol1 must be supplied.");
-        else:
-            if atomicSymbol1 != None:
-                issueWarning = True;
-
-        if atomTypeNumber2 == None:
-            if atomicSymbol2 != None:
-                atomTypeNumber2 = Constants.SymbolToAtomicNumber(atomicSymbol2);
-        else:
-            if atomicSymbol2 != None:
-                issueWarning = True;
-
-        if issueWarning:
-            warnings.warn("When both atomTypeNumber* and atomicSymbol* are supplied, atomTypeNumber* takes precedence.", UserWarning);
+        atomTypeNumber1 = AtomTypeToAtomTypeNumber(atomType1);
+        atomTypeNumber2 = AtomTypeToAtomTypeNumber(atomType2);
 
         # Get the atom-type numbers and collect the indices of atoms to swap.
 
@@ -573,7 +535,7 @@ class Structure:
             ];
 
         if len(swapIndices) == 0:
-            raise Exception("Error: The atom to swap specified by atomTypeNumber1/atomicSymbol1 was not found in the current structure.");
+            raise Exception("Error: The atom to swap specified by atomType1 was not found in the current structure.");
 
         if atomTypeNumber2 != None:
             # If atomTyoeNumber2 was supplied via atomTypeNumber2/atomicSymbol2, adjust the atom-type numbers and return a new structure.
@@ -593,8 +555,7 @@ class Structure:
                 # Return a new structure with the updated atom-type numbers.
 
                 return Structure(
-                    self.GetLatticeVectors(), self.GetAtomPositions(),
-                    newAtomTypeNumbers
+                    self.GetLatticeVectors(), self.GetAtomPositions(), newAtomTypeNumbers
                     );
         else:
             # If atomTypeNumber2 is None, return a new structure with the atoms removed.
@@ -613,3 +574,25 @@ class Structure:
 
     DefaultName = "Unknown Structure";
     DefaultSymmetryEquivalenceTolerance = 1.0e-5;
+
+
+# --------------
+# Static Methods
+# --------------
+
+# This should ideally be attached to the Structure class, but Python 2.x doesn't allow classes to have static methods.
+
+def AtomTypeToAtomTypeNumber(atomType):
+    if atomType != None:
+        # If atomType is not None, try and convert it to an atom-type number.
+
+        try:
+            # Assume atomType is (convertible to) an integer.
+
+            return int(atomType);
+        except ValueError:
+            # If that fails, assume atomType is an atomic symbol and lookup the corresponding atomic number.
+
+            return Constants.SymbolToAtomicNumber(str(atomType));
+    else:
+        return None;

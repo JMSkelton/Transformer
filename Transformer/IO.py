@@ -1,4 +1,4 @@
-# Transformer/IO.py by J. M. SKelton
+# Transformer/IO.py by J. M. Skelton
 
 
 # -------
@@ -119,7 +119,7 @@ def ReadPOSCARFile(filePath):
     # If a scale factor other than 1 has been set, adjust the lattice vectors.
 
     if scaleFactor != 1.0:
-        for i, vector in latticeVectors:
+        for i, vector in enumerate(latticeVectors):
             latticeVectors[i] = [scaleFactor * x for x in vector];
 
     # Build a list of atom-type numbers.
@@ -147,8 +147,7 @@ def ReadPOSCARFile(filePath):
     # Return a Structure object.
 
     return Structure(
-        latticeVectors, atomPositions,
-        atomTypeNumbers = atomTypeNumbers, name = systemName
+        latticeVectors, atomPositions, atomTypeNumbers, name = systemName
         );
 
 def WritePOSCARFile(structure, filePath, atomicSymbolLookupTable = None):
