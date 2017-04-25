@@ -2,7 +2,7 @@ AtomicSubstitutions(): Performing substitution 1 (Cu -> -1)
 AtomicSubstitutions(): Initial structure set contains 1 structure(s)
 AtomicSubstitutions(): Substituted structure set contains 2 structure(s)
 
-   Spacegroup    |   # Structures   |     # Unique    
+   Spacegroup    |   # Structures   |     # Unique
 ------------------------------------------------------
 81  P-4          |               16 |                2
 
@@ -10,7 +10,7 @@ AtomicSubstitutions(): Performing substitution 2 (Zn -> -2)
 AtomicSubstitutions(): Initial structure set contains 2 structure(s)
 AtomicSubstitutions(): Substituted structure set contains 6 structure(s)
 
-   Spacegroup    |   # Structures   |     # Unique    
+   Spacegroup    |   # Structures   |     # Unique
 ------------------------------------------------------
 81  P-4          |               16 |                2
 3   P2           |               16 |                1
@@ -21,7 +21,7 @@ AtomicSubstitutions(): Initial structure set contains 6 structure(s)
 AtomicSubstitutions(): Substituted structure set contains 64 structure(s)
 AtomicSubstitutions(): Merging removed 30 structure(s)
 
-   Spacegroup    |   # Structures   |     # Unique    
+   Spacegroup    |   # Structures   |     # Unique
 ------------------------------------------------------
 81  P-4          |               32 |                2
 3   P2           |              160 |                5
@@ -32,7 +32,7 @@ AtomicSubstitutions(): Initial structure set contains 34 structure(s)
 AtomicSubstitutions(): Substituted structure set contains 220 structure(s)
 AtomicSubstitutions(): Merging removed 98 structure(s)
 
-   Spacegroup    |   # Structures   |     # Unique    
+   Spacegroup    |   # Structures   |     # Unique
 ------------------------------------------------------
 81  P-4          |               32 |                2
 4   P2_1         |              512 |                8
@@ -44,7 +44,7 @@ AtomicSubstitutions(): Initial structure set contains 122 structure(s)
 AtomicSubstitutions(): Substituted structure set contains 1498 structure(s)
 AtomicSubstitutions(): Merging removed 986 structure(s)
 
-   Spacegroup    |   # Structures   |     # Unique    
+   Spacegroup    |   # Structures   |     # Unique
 ------------------------------------------------------
 81  P-4          |              192 |                2
 3   P2           |            7,872 |               41
@@ -55,7 +55,7 @@ AtomicSubstitutions(): Initial structure set contains 512 structure(s)
 AtomicSubstitutions(): Substituted structure set contains 2976 structure(s)
 AtomicSubstitutions(): Merging removed 1974 structure(s)
 
-   Spacegroup    |   # Structures   |     # Unique    
+   Spacegroup    |   # Structures   |     # Unique
 ------------------------------------------------------
 81  P-4          |              576 |                2
 3   P2           |           23,616 |               41
@@ -66,7 +66,7 @@ AtomicSubstitutions(): Initial structure set contains 1002 structure(s)
 AtomicSubstitutions(): Substituted structure set contains 12798 structure(s)
 AtomicSubstitutions(): Merging removed 9572 structure(s)
 
-   Spacegroup    |   # Structures   |     # Unique    
+   Spacegroup    |   # Structures   |     # Unique
 ------------------------------------------------------
 81  P-4          |            4,608 |                4
 3   P2           |          175,104 |               76
@@ -77,7 +77,7 @@ AtomicSubstitutions(): Initial structure set contains 3226 structure(s)
 AtomicSubstitutions(): Substituted structure set contains 16018 structure(s)
 AtomicSubstitutions(): Merging removed 11930 structure(s)
 
-   Spacegroup    |   # Structures   |     # Unique    
+   Spacegroup    |   # Structures   |     # Unique
 ------------------------------------------------------
 81  P-4          |           29,952 |                8
 5   C2           |            4,608 |                2
@@ -87,7 +87,7 @@ AtomicSubstitutions(): Merging removed 11930 structure(s)
 
 AtomicSubstitutions(): All substitutions performed.
 
-  Substitution   |  # Structures   | sum(Degeneracy) |  Permutations  
+  Substitution   |  # Structures   | sum(Degeneracy) |  Permutations
 ----------------------------------------------------------------------
 0   None         |               1 |               1 |               1
 1   Cu   -> -1   |               - |               - |              16
@@ -101,7 +101,7 @@ AtomicSubstitutions(): All substitutions performed.
 
 AntisiteDefects(): Post processing defect set 1.
 
-   Spacegroup    |   # Structures   |     # Unique    
+   Spacegroup    |   # Structures   |     # Unique
 ------------------------------------------------------
 81  P-4          |               16 |                2
 3   P2           |               16 |                1
@@ -109,7 +109,7 @@ AntisiteDefects(): Post processing defect set 1.
 
 AntisiteDefects(): Post processing defect set 2.
 
-   Spacegroup    |   # Structures   |     # Unique    
+   Spacegroup    |   # Structures   |     # Unique
 ------------------------------------------------------
 81  P-4          |               32 |                2
 4   P2_1         |              512 |                8
@@ -118,7 +118,7 @@ AntisiteDefects(): Post processing defect set 2.
 
 AntisiteDefects(): Post processing defect set 3.
 
-   Spacegroup    |   # Structures   |     # Unique    
+   Spacegroup    |   # Structures   |     # Unique
 ------------------------------------------------------
 81  P-4          |              576 |                2
 3   P2           |           23,616 |               41
@@ -126,11 +126,10 @@ AntisiteDefects(): Post processing defect set 3.
 
 AntisiteDefects(): Post processing defect set 4.
 
-   Spacegroup    |   # Structures   |     # Unique    
+   Spacegroup    |   # Structures   |     # Unique
 ------------------------------------------------------
 81  P-4          |           29,952 |                8
 5   C2           |            4,608 |                2
 4   P2_1         |          354,816 |               41
 3   P2           |        1,103,616 |              125
 1   P1           |       71,889,408 |            3,912
-
