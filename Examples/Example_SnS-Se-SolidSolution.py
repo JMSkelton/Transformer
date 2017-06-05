@@ -30,4 +30,6 @@ solidSolutions = SolidSolution(supercell, 'S', 'Se');
 
 # Output the results.
 
-ExportAtomicSubstitutionResultSet(solidSolutions, prefix = "SnS-Se-SolidSolution", workingDirectory = r"Example_SnS-Se-SolidSolution");
+ExportAtomicSubstitutionResultSet(
+    solidSolutions, prefix = "SnS-Se-SolidSolution", workingDirectory = r"Example_SnS-Se-SolidSolution"
+    );

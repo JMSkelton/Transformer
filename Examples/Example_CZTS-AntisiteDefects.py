@@ -31,4 +31,6 @@ antisiteDefects = AntisiteDefects(supercell, 'Cu', 'Zn', numDefects = 4);
 
 # Output the results.
 
-ExportAtomicSubstitutionResultSet(antisiteDefects, prefix = "CZTS-AntisiteDefects", workingDirectory = r"Example_CZTS-AntisiteDefects");
+ExportAtomicSubstitutionResultSet(
+    antisiteDefects, prefix = "CZTS-AntisiteDefects", workingDirectory = r"Example_CZTS-AntisiteDefects"
+    );

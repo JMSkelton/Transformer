@@ -67,4 +67,6 @@ PrintSpacegroupGroupSummary(resultSet[2]);
 
 # Export the results.
 
-ExportAtomicSubstitutionResultSet(resultSet, prefix = "ZnS-CationMutation", workingDirectory = r"Example_ZnS-CationMutation");
+ExportAtomicSubstitutionResultSet(
+    resultSet, prefix = "ZnS-CationMutation", workingDirectory = r"Example_ZnS-CationMutation"
+    );

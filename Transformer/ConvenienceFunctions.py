@@ -362,7 +362,7 @@ def _AtomicSubstitutions_PrintResultSummary(substitutions, intermediateStructure
         else:
             atomType1, atomType2 = substitution;
 
-            dataRowData = dataRowData + [atomType1, "->", atomType2];
+            dataRowData = dataRowData + [atomType1, "->", atomType2 if atomType2 != None else "None"];
 
         # intermediateStructures will contain a set of structures, grouped by spacegroup, for each index in storeIntermediate.
 
