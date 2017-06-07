@@ -87,6 +87,7 @@ class Structure:
         self._pLatticeVectors = None;
         self._pAtomTypeNumbers = None;
         self._pAtomPositions = None;
+        self._pAtomPositionsCartesian = None;
 
         self._pAtomicSymbolsCounts = None;
         self._pChemicalFormula = None;
@@ -247,6 +248,29 @@ class Structure:
                 ];
 
         return self._pAtomPositions;
+
+    def GetAtomPositionsCartesian(self):
+        # Convert the atom positions to Cartesian coordinates and return as a list of NumPy arrays.
+
+        if self._pAtomPositionsCartesian == None:
+            # Load the lattice vectors.
+
+            latticeVectors = self._latticeVectors;
+
+            v1, v2, v3 = latticeVectors[0, :], latticeVectors[1, :], latticeVectors[2, :];
+
+            # Load the atom positions and convert to Cartesian coordinates.
+
+            atomPositions = [];
+
+            for item in self._atoms[['pos_x', 'pos_y', 'pos_z']]:
+                atomPositions.append(
+                    item['pos_x'] * v1 + item['pos_y'] * v2 + item['pos_z'] * v3
+                    );
+
+            self._pAtomPositionsCartesian = atomPositions;
+
+        return self._pAtomPositionsCartesian;
 
     def GetSymmetryAnalysisTolerance(self):
         if self._symmetryAnalysisTolerance == None:

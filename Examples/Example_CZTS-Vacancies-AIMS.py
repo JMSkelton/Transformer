@@ -1,4 +1,4 @@
-# Example_CZTS-Vacancies.py by J. M. Skelton
+# Example_CZTS-Vacancies-AIMS.py by J. M. Skelton
 
 
 # -------
@@ -7,7 +7,7 @@
 
 # Import routines from Transformer.
 
-from Transformer.IO import ReadPOSCARFile;
+from Transformer.IO import ReadAIMSGeometryFile;
 from Transformer.ConvenienceFunctions import AtomicSubstitutions, ExportAtomicSubstitutionResultSet;
 
 
@@ -17,7 +17,7 @@ from Transformer.ConvenienceFunctions import AtomicSubstitutions, ExportAtomicSu
 
 # Read the input structure.
 
-structure = ReadPOSCARFile("Cu2ZnSnS4.vasp");
+structure = ReadAIMSGeometryFile("Cu2ZnSnS4.geometry.in");
 
 # Generate a 2x2x1 supercell (64 atoms).
 
@@ -38,7 +38,7 @@ _, resultSet = AtomicSubstitutions(
 # Export the results.
 
 ExportAtomicSubstitutionResultSet(
-    resultSet, prefix = "CZTS-Cu-Vacancies", workingDirectory = r"Example_CZTS-Vacancies"
+    resultSet, prefix = "CZTS-Cu-Vacancies", workingDirectory = r"Example_CZTS-Vacancies", fileFormat = 'aims'
     );
 
 # Generate structures with a single Zn or Sn defect.
@@ -51,7 +51,7 @@ for vacancyAtom in 'Zn', 'Sn':
         );
 
     ExportAtomicSubstitutionResultSet(
-        resultSet, prefix = r"CZTS-{0}-Vacancy".format(vacancyAtom), workingDirectory = r"Example_CZTS-Vacancies"
+        resultSet, prefix = r"CZTS-{0}-Vacancy".format(vacancyAtom), workingDirectory = r"Example_CZTS-Vacancies", fileFormat = 'aims'
         );
 
 # Generate structures with 1-4 S vacancies.
@@ -64,7 +64,7 @@ _, resultSet = AtomicSubstitutions(
     );
 
 ExportAtomicSubstitutionResultSet(
-    resultSet, prefix = r"CZTS-S-Vacancies", workingDirectory = r"Example_CZTS-Vacancies"
+    resultSet, prefix = r"CZTS-S-Vacancies", workingDirectory = r"Example_CZTS-Vacancies", fileFormat = 'aims'
     );
 
 # Generate structures with Schottky defects (i.e. cation vacancies with balanced S vacancies to preserve charge neutrality).
@@ -80,5 +80,5 @@ for cation, numCationVacancies, numAnionVacancies in ('Cu', 2, 1), ('Zn', 1, 1),
         );
 
     ExportAtomicSubstitutionResultSet(
-        resultSet, prefix = r"CZTS-{0}-SchottkyDefect".format(cation), workingDirectory = r"Example_CZTS-Vacancies"
+        resultSet, prefix = r"CZTS-{0}-SchottkyDefect".format(cation), workingDirectory = r"Example_CZTS-Vacancies", fileFormat = 'aims'
         );

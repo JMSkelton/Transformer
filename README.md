@@ -29,6 +29,9 @@ However, the [Examples](./Examples) folder contains a few examples illustrating 
 
 3. [ZnS "cation mutation"](./Examples/Example_ZnS-CationMutation.py): Starting from a 1&times;1&times;2 supercell expansion of the conventional ZnS cell, generate CuGaS<sub>2</sub> and Stannite/Kesterite Cu<sub>2</sub>ZnSnS<sub>4</sub> by successive cation substitutions.
 
+4. [Cu<sub>2</sub>ZnSnS<sub>4</sub> vacancies](./Examples/Example_CZTS-Vacancies-AIMS.py): Generate 2&times;2&times;1 supercells of kesterite Cu<sub>2</sub>ZnSnS<sub>4</sub> with Cu, Zn, Sn and S defects, and cation vacancies with compensating anion vacancies (i.e. Schottky defects).
+   This example uses the FHI-AIMS I/O routines.
+
 TODO List
 =========
 

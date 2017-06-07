@@ -404,7 +404,16 @@ def _AtomicSubstitutions_PrintResultSummary(substitutions, intermediateStructure
 # Batch Export Functions
 # ----------------------
 
-def ExportAtomicSubstitutionResultSet(resultSet, prefix = None, atomicSymbolLookupTable = None, workingDirectory = "./"):
+SupportedExportFileFormats = ['vasp', 'aims'];
+
+def ExportAtomicSubstitutionResultSet(resultSet, prefix = None, atomicSymbolLookupTable = None, workingDirectory = "./", fileFormat = 'vasp'):
+    fileFormat = fileFormat.lower();
+
+    # Check fileFormat.
+
+    if fileFormat not in SupportedExportFileFormats:
+        raise Exception("Error: fileFormat '{0}' is not supported.".format(fileFormat));
+
     # If workingDirectory does not exist, create it.
 
     if not os.path.isdir(workingDirectory):
@@ -463,7 +472,7 @@ def ExportAtomicSubstitutionResultSet(resultSet, prefix = None, atomicSymbolLook
 
                 structures, degeneracies = spacegroupGroups[key];
 
-                # Write each structure to a POSCAR file and add to the archive.
+                # Write out each structure and add to the archive.
 
                 for i, (structure, degeneracy) in enumerate(zip(structures, degeneracies)):
                     # Give each structure a title line that includes the chemical formula, spacegroup and normalised degeneracy.
@@ -474,9 +483,14 @@ def ExportAtomicSubstitutionResultSet(resultSet, prefix = None, atomicSymbolLook
 
                     # Generate a file name from the chemical formula, spacegroup number and structure number.
 
-                    fileName = "{0}_SG-{1}_{2:0>3}.vasp".format(chemicalFormula, spacegroupNumber, i + 1);
+                    fileName = None;
 
-                    IO.WritePOSCARFile(structure, fileName);
+                    if fileFormat == 'vasp':
+                        fileName = "{0}_SG-{1}_{2:0>3}.vasp".format(chemicalFormula, spacegroupNumber, i + 1);
+                        IO.WritePOSCARFile(structure, fileName);
+                    elif fileFormat == 'aims':
+                        fileName = "{0}_SG-{1}_{2:0>3}.geometry.in".format(chemicalFormula, spacegroupNumber, i + 1);
+                        IO.WriteAIMSGeometryFile(structure, fileName);
 
                     archiveFile.add(
                         fileName, arcname = "{0}/{1}/{2}".format(archiveName, subfolderName, fileName)

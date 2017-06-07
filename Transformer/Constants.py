@@ -20,7 +20,9 @@ PeriodicTable = [
 
 def SymbolToAtomicNumber(symbol):
     for i, testSymbol in enumerate(PeriodicTable):
-        if symbol == testSymbol:
+        # Make sure symbol has the correct casing.
+
+        if symbol.title() == testSymbol:
             return i;
 
     raise Exception("Error: Atomic symbol '{0}' not found in the internal periodic table.".format(symbol));
