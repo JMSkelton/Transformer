@@ -319,7 +319,7 @@ class Structure:
         if tolerance == None:
             tolerance = Structure.DefaultSymmetryEquivalenceTolerance;
 
-        return ((structure._latticeVectors - self._latticeVectors) <= tolerance).all();
+        return (np.abs(structure._latticeVectors - self._latticeVectors) <= tolerance).all();
 
     def CompareAtomTypeNumbers(self, structure):
         # First check that the supplied structure has the same number of atoms.
@@ -356,7 +356,7 @@ class Structure:
         positions1 = self._atoms[:][['pos_x', 'pos_y', 'pos_z']].view(dtype = np.float64);
         positions2 = structure._atoms[:][['pos_x', 'pos_y', 'pos_z']].view(dtype = np.float64);
 
-        return ((positions2 - positions1) <= tolerance).all();
+        return (np.abs(positions2 - positions1) <= tolerance).all();
 
     def CompareCell(self, structure, tolerance = None):
         # If no equivalence tolerance is supplied, use the default.
