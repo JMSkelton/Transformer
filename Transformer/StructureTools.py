@@ -99,7 +99,7 @@ def MergeStructureSet(structures, degeneracies = None, parentSymmetryOperations 
                     remove = compareStructure.CompareLatticeVectors(structure);
 
                 if not remove and compareAtomTypes:
-                    remove = compareStructure.CompareAtomTypes(structure);
+                    remove = compareStructure.CompareAtomTypeNumbers(structure);
 
                 if not remove:
                     remove = compareStructure.CompareAtomPositions(structure);
