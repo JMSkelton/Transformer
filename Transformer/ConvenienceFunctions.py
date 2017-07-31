@@ -140,7 +140,7 @@ def AntisiteDefects(structure, atom1, atom2, numDefects = None, printProgressUpd
 
     return antisiteDefects;
 
-def SolidSolution(structure, atom1, atom2, printProgressUpdate = True, tolerance = None):
+def SolidSolution(structure, atom1, atom2, printProgressUpdate = True, useShortcut = False, tolerance = None):
     # Convert atom1 and atom2 to atom-type numbers.
 
     atomFind = Structure.AtomTypeToAtomTypeNumber(atom1);
@@ -164,12 +164,96 @@ def SolidSolution(structure, atom1, atom2, printProgressUpdate = True, tolerance
         if atomType == atomFind:
             substitutionCount = substitutionCount + 1;
 
+    # If useShortcut is set, we can save some time by only enumerating the structures for up to ~50 % substitution, and generating the rest by swapping atoms.
+
+    substitutions = None;
+
+    if useShortcut:
+        substitutions = [(atom1, atom2)] * (substitutionCount // 2 + substitutionCount % 2);
+    else:
+        substitutions = [(atom1, atom2)] * substitutionCount;
+
     # Build the set of solid solutions by performing successive atomic substitutions.
 
     _, solidSolutions = AtomicSubstitutions(
-        structure, [(atom1, atom2)] * substitutionCount,
+        structure, substitutions,
         printProgressUpdate = printProgressUpdate, tolerance = tolerance
         );
+
+    # If useShortcut is set, generate the structures for the remaining substitutions.
+
+    if useShortcut:
+        # Select an atom-type number to use as a placeholder.
+
+        placeholder = None;
+
+        trialTypeNumber = -1;
+
+        while True:
+            if trialTypeNumber not in atomTypeNumbers and trialTypeNumber != atomReplace:
+                placeholder = trialTypeNumber;
+                break;
+
+            trialTypeNumber = trialTypeNumber - 1;
+
+        for i in range(len(substitutions) + 1, substitutionCount):
+            # If requested, print a progress update.
+
+            if printProgressUpdate:
+                print("SolidSolution(): Inverting substitution set {0} -> {1}".format(substitutionCount - i, i));
+
+            newResultSet = { };
+
+            resultSet = solidSolutions[substitutionCount - i];
+
+            for key, (structures, degeneracies) in resultSet.items():
+                newStructures = [];
+
+                for structure in structures:
+                    # Temporarily swap atomReplace with placeholder.
+
+                    structure = structure.GetAtomSwap(atomReplace, placeholder);
+
+                    # Swap atomFind with atomReplace.
+
+                    structure = structure.GetAtomSwap(atomFind, atomReplace);
+
+                    # Finally, replace placeholder with atomFind.
+
+                    structure = structure.GetAtomSwap(placeholder, atomFind);
+
+                    # Add the new structure to the list.
+
+                    newStructures.append(structure);
+
+                # Add the new structures to the new result set, under the same spacegroup key, with a copy of the degeneracies.
+
+                newResultSet[key] = (
+                    newStructures, list(degeneracies)
+                    );
+
+            # Extend the list of solid solutions with the new result set.
+
+            solidSolutions.append(newResultSet);
+
+        if printProgressUpdate:
+            print("");
+
+        if printProgressUpdate:
+            # Work out the number of permutations at each round of substitution.
+
+            permutationCounts = [1];
+
+            for i in range(0, substitutionCount):
+                permutationCounts.append(
+                    permutationCounts[i] * (substitutionCount - i)
+                    );
+
+            # Print a summary of the new results ("repurposing" the _AtomicSubstitutions_PrintResultSummary() function).
+
+            _AtomicSubstitutions_PrintResultSummary(
+                [None] + [(atom1, atom2)] * substitutionCount, solidSolutions, permutationCounts, [i for i in range(0, len(solidSolutions))]
+                );
 
     # Return the result.
 
@@ -406,7 +490,7 @@ def _AtomicSubstitutions_PrintResultSummary(substitutions, intermediateStructure
 
 SupportedExportFileFormats = ['vasp', 'aims'];
 
-def ExportAtomicSubstitutionResultSet(resultSet, prefix = None, atomicSymbolLookupTable = None, workingDirectory = "./", fileFormat = 'vasp'):
+def ExportAtomicSubstitutionResultSet(resultSet, prefix = None, atomicSymbolLookupTable = None, workingDirectory = "./", fileFormat = 'vasp', spacegroupSubfolders = False):
     fileFormat = fileFormat.lower();
 
     # Check fileFormat.
@@ -464,11 +548,14 @@ def ExportAtomicSubstitutionResultSet(resultSet, prefix = None, atomicSymbolLook
             for key in keys:
                 spacegroupNumber, spacegroupSymbol = key;
 
-                # The structures will be divided into spacegroup subfolders.
+                # If spacegroupSubfolders is set, the structures will be divided into spacegroup subfolders.
 
-                subfolderName = "{0}-{1}".format(
-                    spacegroupNumber, spacegroupSymbol.replace('/', '_')
-                    );
+                subfolderName = None;
+
+                if spacegroupSubfolders:
+                    subfolderName = "{0}-{1}".format(
+                        spacegroupNumber, spacegroupSymbol.replace('/', '_')
+                        );
 
                 structures, degeneracies = spacegroupGroups[key];
 
@@ -486,14 +573,14 @@ def ExportAtomicSubstitutionResultSet(resultSet, prefix = None, atomicSymbolLook
                     fileName = None;
 
                     if fileFormat == 'vasp':
-                        fileName = "{0}_SG-{1}_{2:0>3}.vasp".format(chemicalFormula, spacegroupNumber, i + 1);
+                        fileName = "{0}_SG-{1}_{2:0>4}.vasp".format(chemicalFormula, spacegroupNumber, i + 1);
                         IO.WritePOSCARFile(structure, fileName);
                     elif fileFormat == 'aims':
-                        fileName = "{0}_SG-{1}_{2:0>3}.geometry.in".format(chemicalFormula, spacegroupNumber, i + 1);
+                        fileName = "{0}_SG-{1}_{2:0>4}.geometry.in".format(chemicalFormula, spacegroupNumber, i + 1);
                         IO.WriteAIMSGeometryFile(structure, fileName);
 
                     archiveFile.add(
-                        fileName, arcname = "{0}/{1}/{2}".format(archiveName, subfolderName, fileName)
+                        fileName, arcname = "{0}/{1}/{2}".format(archiveName, subfolderName, fileName) if subfolderName != None else "{0}/{1}".format(archiveName, fileName)
                         );
 
                     # Delete the temporary file once added to the archive.
