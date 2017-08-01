@@ -7,7 +7,7 @@
 # Import routines from Transformer.
 
 from Transformer.IO import ReadPOSCARFile;
-from Transformer.ConvenienceFunctions import AtomicSubstitutions, PrintSpacegroupGroupSummary, ExportAtomicSubstitutionResultSet;
+from Transformer.ConvenienceFunctions import AtomicSubstitutions, PrintSpacegroupGroupSummary, ExportResultSet;
 
 
 # ----
@@ -67,6 +67,6 @@ PrintSpacegroupGroupSummary(resultSet[2]);
 
 # Export the results.
 
-ExportAtomicSubstitutionResultSet(
+ExportResultSet(
     resultSet, prefix = "ZnS-CationMutation", workingDirectory = r"Example_ZnS-CationMutation"
     );

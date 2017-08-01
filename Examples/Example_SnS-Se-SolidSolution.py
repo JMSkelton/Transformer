@@ -8,7 +8,7 @@
 # Import routines from Transformer.
 
 from Transformer.IO import ReadPOSCARFile;
-from Transformer.ConvenienceFunctions import SolidSolution, ExportAtomicSubstitutionResultSet;
+from Transformer.ConvenienceFunctions import SolidSolution, ExportResultSet;
 
 
 # ----
@@ -24,12 +24,12 @@ structure = ReadPOSCARFile("SnS-Pnma.vasp");
 supercell = structure.GetSupercell((2, 1, 2));
 
 # Evaluate the full set of S/Se solid soliutions.
-# This takes about 30 mins on a Core i5 iMac (Late 2014).
+# This takes about 5 mins on a Core i5 iMac (Late 2014).
 
 solidSolutions = SolidSolution(supercell, 'S', 'Se');
 
 # Output the results.
 
-ExportAtomicSubstitutionResultSet(
+ExportResultSet(
     solidSolutions, prefix = "SnS-Se-SolidSolution", workingDirectory = r"Example_SnS-Se-SolidSolution"
     );

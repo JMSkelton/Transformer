@@ -4,6 +4,7 @@ __all__ = [
     "Constants",
     "ConvenienceFunctions",
     "IO",
+    "DevelopmentTools",
     "Structure",
     "StructureTools"
     ];

@@ -8,7 +8,7 @@
 # Import routines from Transformer.
 
 from Transformer.IO import ReadAIMSGeometryFile;
-from Transformer.ConvenienceFunctions import AtomicSubstitutions, ExportAtomicSubstitutionResultSet;
+from Transformer.ConvenienceFunctions import AtomicSubstitutions, ExportResultSet;
 
 
 # ----
@@ -37,7 +37,7 @@ _, resultSet = AtomicSubstitutions(
 
 # Export the results.
 
-ExportAtomicSubstitutionResultSet(
+ExportResultSet(
     resultSet, prefix = "CZTS-Cu-Vacancies", workingDirectory = r"Example_CZTS-Vacancies", fileFormat = 'aims'
     );
 
@@ -50,20 +50,19 @@ for vacancyAtom in 'Zn', 'Sn':
         supercell, substitutions
         );
 
-    ExportAtomicSubstitutionResultSet(
+    ExportResultSet(
         resultSet, prefix = r"CZTS-{0}-Vacancy".format(vacancyAtom), workingDirectory = r"Example_CZTS-Vacancies", fileFormat = 'aims'
         );
 
-# Generate structures with 1-4 S vacancies.
-# The final round of substitutions (4th S vacancy) takes a few minutes to run; the example can be sped up by lowering the number of substitutions.
+# Generate structures with one or two S vacancies.
 
-substitutions = [('S', None)] * 4;
+substitutions = [('S', None)] * 2;
 
 _, resultSet = AtomicSubstitutions(
     supercell, substitutions
     );
 
-ExportAtomicSubstitutionResultSet(
+ExportResultSet(
     resultSet, prefix = r"CZTS-S-Vacancies", workingDirectory = r"Example_CZTS-Vacancies", fileFormat = 'aims'
     );
 
@@ -79,6 +78,6 @@ for cation, numCationVacancies, numAnionVacancies in ('Cu', 2, 1), ('Zn', 1, 1),
         supercell, substitutions, storeIntermediate = [0, len(substitutions)]
         );
 
-    ExportAtomicSubstitutionResultSet(
+    ExportResultSet(
         resultSet, prefix = r"CZTS-{0}-SchottkyDefect".format(cation), workingDirectory = r"Example_CZTS-Vacancies", fileFormat = 'aims'
         );

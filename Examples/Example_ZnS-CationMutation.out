@@ -2,7 +2,7 @@ AtomicSubstitutions(): Performing substitution 1 (Zn -> Cu)
 AtomicSubstitutions(): Initial structure set contains 1 structure(s)
 AtomicSubstitutions(): Substituted structure set contains 1 structure(s)
 
-   Spacegroup    |   # Structures   |     # Unique
+   Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
 111 P-42m        |                8 |                1
 
@@ -10,7 +10,7 @@ AtomicSubstitutions(): Performing substitution 2 (Zn -> Cu)
 AtomicSubstitutions(): Initial structure set contains 1 structure(s)
 AtomicSubstitutions(): Substituted structure set contains 4 structure(s)
 
-   Spacegroup    |   # Structures   |     # Unique
+   Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
 215 P-43m        |                8 |                1
 121 I-42m        |                8 |                1
@@ -22,7 +22,7 @@ AtomicSubstitutions(): Initial structure set contains 4 structure(s)
 AtomicSubstitutions(): Substituted structure set contains 9 structure(s)
 AtomicSubstitutions(): Merging removed 5 structure(s)
 
-   Spacegroup    |   # Structures   |     # Unique
+   Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
 111 P-42m        |               48 |                1
 81  P-4          |               96 |                1
@@ -34,7 +34,7 @@ AtomicSubstitutions(): Initial structure set contains 4 structure(s)
 AtomicSubstitutions(): Substituted structure set contains 14 structure(s)
 AtomicSubstitutions(): Merging removed 6 structure(s)
 
-   Spacegroup    |   # Structures   |     # Unique
+   Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
 122 I-42d        |               96 |                1
 115 P-4m2        |              240 |                3
@@ -47,7 +47,7 @@ AtomicSubstitutions(): Performing substitution 5 (Zn -> Ga)
 AtomicSubstitutions(): Initial structure set contains 8 structure(s)
 AtomicSubstitutions(): Substituted structure set contains 14 structure(s)
 
-   Spacegroup    |   # Structures   |     # Unique
+   Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
 111 P-42m        |              192 |                1
 81  P-4          |            1,152 |                3
@@ -60,7 +60,7 @@ AtomicSubstitutions(): Initial structure set contains 14 structure(s)
 AtomicSubstitutions(): Substituted structure set contains 33 structure(s)
 AtomicSubstitutions(): Merging removed 9 structure(s)
 
-   Spacegroup    |   # Structures   |     # Unique
+   Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
 121 I-42m        |              192 |                1
 115 P-4m2        |              192 |                1
@@ -77,7 +77,7 @@ AtomicSubstitutions(): Initial structure set contains 24 structure(s)
 AtomicSubstitutions(): Substituted structure set contains 33 structure(s)
 AtomicSubstitutions(): Merging removed 19 structure(s)
 
-   Spacegroup    |   # Structures   |     # Unique
+   Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
 111 P-42m        |            1,152 |                1
 81  P-4          |            6,912 |                3
@@ -90,7 +90,7 @@ AtomicSubstitutions(): Initial structure set contains 14 structure(s)
 AtomicSubstitutions(): Substituted structure set contains 14 structure(s)
 AtomicSubstitutions(): Merging removed 6 structure(s)
 
-   Spacegroup    |   # Structures   |     # Unique
+   Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
 122 I-42d        |            2,304 |                1
 115 P-4m2        |            5,760 |                3
@@ -103,7 +103,7 @@ AtomicSubstitutions(): Performing substitution 9 (Ga -> Zn)
 AtomicSubstitutions(): Initial structure set contains 8 structure(s)
 AtomicSubstitutions(): Substituted structure set contains 14 structure(s)
 
-   Spacegroup    |   # Structures   |     # Unique
+   Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
 111 P-42m        |            4,608 |                1
 81  P-4          |           27,648 |                3
@@ -116,7 +116,7 @@ AtomicSubstitutions(): Initial structure set contains 14 structure(s)
 AtomicSubstitutions(): Substituted structure set contains 33 structure(s)
 AtomicSubstitutions(): Merging removed 9 structure(s)
 
-   Spacegroup    |   # Structures   |     # Unique
+   Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
 121 I-42m        |            4,608 |                1
 115 P-4m2        |            4,608 |                1
@@ -132,7 +132,7 @@ AtomicSubstitutions(): Performing substitution 11 (Ga -> Sn)
 AtomicSubstitutions(): Initial structure set contains 24 structure(s)
 AtomicSubstitutions(): Substituted structure set contains 33 structure(s)
 
-   Spacegroup    |   # Structures   |     # Unique
+   Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
 111 P-42m        |           27,648 |                3
 81  P-4          |           55,296 |                3
@@ -145,7 +145,7 @@ AtomicSubstitutions(): Initial structure set contains 33 structure(s)
 AtomicSubstitutions(): Substituted structure set contains 33 structure(s)
 AtomicSubstitutions(): Merging removed 9 structure(s)
 
-   Spacegroup    |   # Structures   |     # Unique
+   Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
 121 I-42m        |            9,216 |                1
 115 P-4m2        |            9,216 |                1
@@ -159,7 +159,7 @@ AtomicSubstitutions(): Merging removed 9 structure(s)
 
 AtomicSubstitutions(): All substitutions performed.
 
-  Substitution   |  # Structures   | sum(Degeneracy) |  Permutations
+  Substitution   |  # Structures   | sum(Degeneracy) |  Permutations  
 ----------------------------------------------------------------------
 0   None         |               1 |               1 |               1
 1   Zn   -> Cu   |               - |               - |               8
@@ -177,13 +177,13 @@ AtomicSubstitutions(): All substitutions performed.
 
 Initial structure:
 
-   Spacegroup    |   # Structures   |     # Unique
+   Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
 216 F-43m        |                1 |                1
 
 After first substitution:
 
-   Spacegroup    |   # Structures   |     # Unique
+   Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
 122 I-42d        |            2,304 |                1
 115 P-4m2        |            5,760 |                3
@@ -194,7 +194,7 @@ After first substitution:
 
 After second substitution:
 
-   Spacegroup    |   # Structures   |     # Unique
+   Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
 121 I-42m        |            9,216 |                1
 115 P-4m2        |            9,216 |                1
@@ -205,3 +205,4 @@ After second substitution:
 25  Pmm2         |           18,432 |                1
 17  P222_1       |          110,592 |                3
 3   P2           |          663,552 |                9
+

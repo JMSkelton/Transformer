@@ -53,17 +53,15 @@ class Structure:
         if len(atomTypeNumbers) != len(atomPositions):
             raise Exception("Error: The lengths of atomTypeNumbers/atomicSymbols and atomPositions are not consistent.");
 
-        # Generate a NumPy structured array to store the atom data.
+        # Generate a NumPy array to store the atom data.
         # The atom positions are adjusted into the range [0, 1], which can be done as a one liner with the non-standrd (?) Python modulus (%) operator.
 
-        atoms = np.array(
-            [tuple([typeNumber] + [x % 1.0 for x in position]) for typeNumber, position in zip(atomTypeNumbers, atomPositions)],
-            dtype = [('type_number', 'i4'), ('pos_x', 'f8'), ('pos_y', 'f8'), ('pos_z', 'f8')]
-            );
+        atoms = np.zeros((len(atomPositions), 4), dtype = np.float64);
 
-        # Sort the data.
+        atoms[:, 0] = atomTypeNumbers;
 
-        atoms.sort(axis = 0);
+        atoms[:, 1:] = atomPositions;
+        atoms[:, 1:] %= 1.0;
 
         # Store the atoms.
 
@@ -73,6 +71,10 @@ class Structure:
 
         self._name = name;
 
+        # Sort the atoms.
+
+        self._SortAtoms();
+
         # Initialise the fields used to store lazily-initialised properties.
 
         self._ResetLazyPropertyFields();
@@ -80,6 +82,11 @@ class Structure:
     # ---------------
     # Private Methods
     # ---------------
+
+    def _SortAtoms(self):
+        # Code taken from https://stackoverflow.com/questions/2828059/sorting-arrays-in-numpy-by-column.
+
+        self._atoms.view('f8, f8, f8, f8').sort(order = ['f0', 'f1', 'f2', 'f3'], axis = 0);
 
     def _ResetLazyPropertyFields(self):
         # Reset fields used for lazy initialisation of some of the quantities returned by the Get* functions.
@@ -160,7 +167,7 @@ class Structure:
     def SetAtom(self, index, atomType, atomPosition = None):
         # Sanity check.
 
-        numAtoms, = self._atoms.shape;
+        numAtoms, _ = self._atoms.shape;
 
         if index >= numAtoms:
             raise Exception("Error: Index {0} is out of range for number of atoms {1}.".format(index, numAtoms));
@@ -174,24 +181,24 @@ class Structure:
         if atomTypeNumber != None:
             # Substitute atom.
 
-            atoms[index]['type_number'] = atomTypeNumber;
+            atoms[index, 0] = atomTypeNumber;
 
             if atomPosition != None:
-                atoms[index]['pos_x', 'pos_y', 'pos_z'] = tuple(x % 1.0 for x in atomPosition);
+                atoms[index, 1:] = [x % 1.0 for x in atomPosition];
 
-            # Resort atoms.
+            # Resort the atoms.
 
-            atoms.sort();
+            self._SortAtoms();
         else:
             if atomPosition != None:
                 warnings.warn("When atomType is set to None, the atom is removed and its position is not updated.", UserWarning);
 
             # Delete atom.
 
-            atomsNew = np.zeros(numAtoms - 1, dtype = [('type_number', 'i4'), ('pos_x', 'f8'), ('pos_y', 'f8'), ('pos_z', 'f8')]);
+            atomsNew = np.zeros((numAtoms - 1, 4), dtype = np.float64);
 
-            atomsNew[:index] = atoms[:index];
-            atomsNew[index:] = atoms[index + 1:];
+            atomsNew[:index] = atoms[:index, :];
+            atomsNew[index:] = atoms[index + 1:, :];
 
             # Since atoms should be sorted, removing an entry shouldn't require resorting.
 
@@ -234,7 +241,9 @@ class Structure:
         # Return the atom-type numbers as a list of integers.
 
         if self._pAtomTypeNumbers == None:
-            self._pAtomTypeNumbers = [item[0] for item in self._atoms[['type_number']]];
+            self._pAtomTypeNumbers = [
+                int(item) for item in self._atoms[:, 0]
+                ];
 
         return self._pAtomTypeNumbers;
 
@@ -243,8 +252,7 @@ class Structure:
 
         if self._pAtomPositions == None:
             self._pAtomPositions = [
-                np.array([item['pos_x'], item['pos_y'], item['pos_z']], dtype = np.float64)
-                    for item in self._atoms[['pos_x', 'pos_y', 'pos_z']]
+                np.copy(item) for item in self._atoms[:, 1:]
                 ];
 
         return self._pAtomPositions;
@@ -263,9 +271,9 @@ class Structure:
 
             atomPositions = [];
 
-            for item in self._atoms[['pos_x', 'pos_y', 'pos_z']]:
+            for x, y, z in self._atoms[:, 1:]:
                 atomPositions.append(
-                    item['pos_x'] * v1 + item['pos_y'] * v2 + item['pos_z'] * v3
+                    x * v1 + y * v2 + z * v3
                     );
 
             self._pAtomPositionsCartesian = atomPositions;
@@ -324,16 +332,18 @@ class Structure:
     def CompareAtomTypeNumbers(self, structure):
         # First check that the supplied structure has the same number of atoms.
 
-        numAtoms1, = structure._atoms.shape;
-        numAtoms2, = self._atoms.shape;
+        numAtoms1, _ = structure._atoms.shape;
+        numAtoms2, _ = self._atoms.shape;
 
         if numAtoms1 != numAtoms2:
             return False;
 
-        # Get a view to the 'type_number' fields in both structures -- this allows them to be compared using NumPy routines.
+        # Get a slice of the _atoms fields containing the atom-type numbers in both structures -- this allows them to be compared using NumPy routines.
 
-        types1 = self._atoms[:][['type_number']].view(np.int32);
-        types2 = structure._atoms[:][['type_number']].view(np.int32);
+        types1 = self._atoms[:, 0];
+        types2 = structure._atoms[:, 0];
+
+        # Although the atom-type numbers are stored as float64 values, they were set as integers, so this comparison should be valid.
 
         return (types2 == types1).all();
 
@@ -345,16 +355,16 @@ class Structure:
 
         # Check the supplied structure has the same number of atoms.
 
-        numAtoms1, = structure._atoms.shape;
-        numAtoms2, = self._atoms.shape;
+        numAtoms1, _ = structure._atoms.shape;
+        numAtoms2, _ = self._atoms.shape;
 
         if numAtoms1 != numAtoms2:
             return False;
 
-        # Generate views to the 'pos_*' fields in both structures, and compare using NumPy.
+        # Get a slice of the _atoms fields containing the atom positions in both structures, and compare using NumPy.
 
-        positions1 = self._atoms[:][['pos_x', 'pos_y', 'pos_z']].view(dtype = np.float64);
-        positions2 = structure._atoms[:][['pos_x', 'pos_y', 'pos_z']].view(dtype = np.float64);
+        positions1 = self._atoms[:, 1:];
+        positions2 = structure._atoms[:, 1:];
 
         return (np.abs(positions2 - positions1) <= tolerance).all();
 

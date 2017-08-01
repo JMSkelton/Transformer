@@ -57,73 +57,88 @@ def MergeStructureSet(structures, degeneracies = None, parentSymmetryOperations 
     if degeneracies == None:
         degeneracies = [1] * len(structures);
 
-    # Test for and remove duplicates.
+    # Test for and mark duplicates.
 
     pointer = 0;
 
+    removeIndices = set();
+
     while pointer < len(structures) - 1:
-        # Set a reference structure.
+        if pointer not in removeIndices:
+            # Set a reference structure.
 
-        structureRef = structures[pointer];
+            structureRef = structures[pointer];
 
-        # Build a list of structures to compare the remaining ones in the set to.
+            # List of symmetry-transformed structures to compare the remaining ones in the set to.
+            # We use lazy initialisation to avoid unnecessary work.
 
-        compareStructures = None;
+            compareStructures = None;
 
-        if parentSymmetryOperations != None:
-            # If a set of symmetry operations were supplied, apply each one in turn to generate transformed structures to compare to the others in the set.
+            # Loop over structures to compare and remove duplicates.
 
-            compareStructures = [
-                structureRef.GetSymmetryTransform(rotation, translation)
-                    for rotation, translation in parentSymmetryOperations
-                ];
-        else:
-            # If not, compare to the reference structure itself.
+            for i in range(pointer + 1, len(structures)):
+                if i not in removeIndices:
+                    structure = structures[i];
 
-            compareStructures = [structureRef];
+                    if compareStructures == None:
+                        # Initialise compareStructures.
 
-        # Loop over structures to compare and remove duplicates.
+                        if parentSymmetryOperations != None:
+                            # If a set of symmetry operations were supplied, apply each one in turn to generate transformed structures to compare to the others in the set.
 
-        for compareStructure in compareStructures:
-            # Mark duplicates for removal.
+                            compareStructures = [
+                                structureRef.GetSymmetryTransform(rotation, translation)
+                                    for rotation, translation in parentSymmetryOperations
+                                ];
 
-            removeIndices = [];
+                            # Prune compareStructures to remove duplicates; this can be a big performance boost for high-symmetry parent structures.
 
-            for i, structure in enumerate(structures[pointer + 1:]):
-                # For testing equality, the atom positions are always compared, and the lattice vectors and atom types may also be compared depending on the parameters.
-                # The order of the equivalence tests is set so as to perform the least computationally-demanding ones first.
+                            compareStructures, _ = MergeStructureSet(
+                                compareStructures, tolerance = tolerance, compareLatticeVectors = False, compareAtomTypes = False
+                                );
+                        else:
+                            # If not, compare to the reference structure itself.
 
-                remove = False;
+                            compareStructures = [structureRef];
 
-                if not remove and compareLatticeVectors:
-                    remove = compareStructure.CompareLatticeVectors(structure);
+                    for compareStructure in compareStructures:
+                        # For testing equality, the atom positions are always compared, and the lattice vectors and atom types may also be compared depending on the parameters.
+                        # The order of the equivalence tests is set so as to perform the least computationally-demanding ones first.
 
-                if not remove and compareAtomTypes:
-                    remove = compareStructure.CompareAtomTypeNumbers(structure);
+                        remove = True;
 
-                if not remove:
-                    remove = compareStructure.CompareAtomPositions(structure);
+                        if compareLatticeVectors:
+                            remove = compareStructure.CompareLatticeVectors(structure);
 
-                if remove:
-                    removeIndices.append(i + pointer + 1);
+                        if remove and compareAtomTypes:
+                            remove = compareStructure.CompareAtomTypeNumbers(structure);
 
-            # If there are structures to remove, add their degeneracies to that of the reference structure, and remove the entries from the structure set and degeneracy list.
+                        if remove:
+                            remove = compareStructure.CompareAtomPositions(structure);
 
-            if len(removeIndices) > 0:
-                for index in removeIndices:
-                    degeneracies[pointer] = degeneracies[pointer] + degeneracies[index];
+                        if remove:
+                            # If a structure is marked for removal, its degeneracy is added to that of the reference.
 
-                structures = [
-                    structure for i, structure in enumerate(structures)
-                        if i not in removeIndices
-                    ];
+                            degeneracies[pointer] += degeneracies[i];
 
-                degeneracies = [
-                    degeneracy for i, degeneracy in enumerate(degeneracies)
-                        if i not in removeIndices
-                    ];
+                            removeIndices.add(i);
 
-        pointer = pointer + 1;
+                            break;
+
+        pointer += 1;
+
+    # Remove marked structures and degeneracies from the lists.
+
+    if len(removeIndices) > 0:
+        structures = [
+            structure for i, structure in enumerate(structures)
+                if i not in removeIndices
+            ];
+
+        degeneracies = [
+            degeneracy for i, degeneracy in enumerate(degeneracies)
+                if i not in removeIndices
+            ];
 
     # Return the merged structure set and associated degeneracies.
 

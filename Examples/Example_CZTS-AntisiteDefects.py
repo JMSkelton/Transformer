@@ -8,7 +8,7 @@
 # Import routines from Transformer.
 
 from Transformer.IO import ReadPOSCARFile;
-from Transformer.ConvenienceFunctions import AntisiteDefects, ExportAtomicSubstitutionResultSet;
+from Transformer.ConvenienceFunctions import AntisiteDefects, ExportResultSet;
 
 
 # ----
@@ -24,13 +24,11 @@ structure = ReadPOSCARFile("Cu2ZnSnS4.vasp");
 supercell = structure.GetSupercell((2, 2, 1));
 
 # Generate inequivalent structures with 1 and 2 Cu <-> Zn antisite defects using the AntisiteDefects convenience function.
-# At present, this takes 9-10 hrs (!) on a Core i5 iMac (Late 2014).
-# This can be _massively_ cut down by setting numDefects = 2 or numDefects = 3.
 
-antisiteDefects = AntisiteDefects(supercell, 'Cu', 'Zn', numDefects = 4);
+antisiteDefects = AntisiteDefects(supercell, 'Cu', 'Zn', numDefects = 2);
 
 # Output the results.
 
-ExportAtomicSubstitutionResultSet(
+ExportResultSet(
     antisiteDefects, prefix = "CZTS-AntisiteDefects", workingDirectory = r"Example_CZTS-AntisiteDefects"
     );
