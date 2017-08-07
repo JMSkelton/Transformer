@@ -23,9 +23,10 @@ structure = ReadPOSCARFile("Cu2ZnSnS4.vasp");
 
 supercell = structure.GetSupercell((2, 2, 1));
 
-# Generate inequivalent structures with 1 and 2 Cu <-> Zn antisite defects using the AntisiteDefects convenience function.
+# Generate inequivalent structures with up to four Cu <-> Zn antisite defects using the AntisiteDefects convenience function.
+# This takes just over an hour on a Core i5 iMac (Late 2014); this can be greatly reduced by lowering numDefects.
 
-antisiteDefects = AntisiteDefects(supercell, 'Cu', 'Zn', numDefects = 2);
+antisiteDefects = AntisiteDefects(supercell, 'Cu', 'Zn', numDefects = 4);
 
 # Output the results.
 

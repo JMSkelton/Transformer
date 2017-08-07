@@ -62,25 +62,8 @@ def AntisiteDefects(structure, atom1, atom2, numDefects = None, printProgressUpd
 
     # Select a pair of atom-type numbers as placeholders.
 
-    placeholder1, placeholder2 = None, None;
-
-    trialTypeNumber = -1;
-
-    while True:
-        if trialTypeNumber not in atomTypeNumbers:
-            placeholder1 = trialTypeNumber;
-            break;
-
-        trialTypeNumber = trialTypeNumber - 1;
-
-    trialTypeNumber = trialTypeNumber - 1;
-
-    while True:
-        if trialTypeNumber not in atomTypeNumbers:
-            placeholder2 = trialTypeNumber;
-            break;
-
-        trialTypeNumber = trialTypeNumber - 1;
+    placeholder1 = structure.GetAtomTypeNumberPlaceholder();
+    placeholder2 = placeholder1 - 1;
 
     # Collect structures with antisite defects by performing a sequence of substitutions where we swap atom1 -> 1 and atom2 -> 2.
 
@@ -103,12 +86,14 @@ def AntisiteDefects(structure, atom1, atom2, numDefects = None, printProgressUpd
         structuresFlat, degeneraciesFlat = [], [];
 
         for structures, degeneracies in spacegroupGroups.values():
-            for structure in structures:
-                structuresFlat.append(
-                    structure.GetAtomSwap(placeholder1, atom2).GetAtomSwap(placeholder2, atom1)
-                    );
-
+            structuresFlat = structuresFlat + structures;
             degeneraciesFlat = degeneraciesFlat + degeneracies;
+
+        # Replace the placeholders.
+
+        for structure in structuresFlat:
+            structure.SwapAtoms(placeholder1, atom2);
+            structure.SwapAtoms(placeholder2, atom1);
 
         numStructures = len(structuresFlat);
 
@@ -117,8 +102,12 @@ def AntisiteDefects(structure, atom1, atom2, numDefects = None, printProgressUpd
         structuresFlat, degeneraciesFlat = StructureTools.MergeStructureSet(
             structuresFlat, degeneraciesFlat,
             parentSymmetryOperations = structure.GetSymmetryOperations(), tolerance = tolerance,
-            compareLatticeVectors = False, compareAtomTypes = False
+            compareLatticeVectors = False, compareAtomTypes = False,
+            progressBar = printProgressUpdate
             );
+
+        if printProgressUpdate and StructureTools.ImportedTQDM:
+            print("");
 
         reductionCount = len(structuresFlat) - numStructures;
 
@@ -213,19 +202,27 @@ def SolidSolution(structure, atom1, atom2, printProgressUpdate = True, useShortc
                 newStructures = [];
 
                 for structure in structures:
+                    # Clone the structure.
+
+                    structure = structure.Clone();
+
+                    # Get a placeholder to temporarily swap atoms.
+
+                    placeholder = structure.GetAtomTypeNumberPlaceholder();
+
                     if swapIndex != 0:
                         # Temporarily swap atomReplace with placeholder.
 
-                        structure = structure.GetAtomSwap(atomReplace, placeholder);
+                        structure.SwapAtoms(atomReplace, placeholder);
 
                     # Swap atomFind with atomReplace.
 
-                    structure = structure.GetAtomSwap(atomFind, atomReplace);
+                    structure.SwapAtoms(atomFind, atomReplace);
 
                     if swapIndex != 0:
                         # Finally, replace placeholder with atomFind.
 
-                        structure = structure.GetAtomSwap(placeholder, atomFind);
+                        structure.SwapAtoms(placeholder, atomFind);
 
                     # Add the new structure to the list.
 
@@ -319,7 +316,7 @@ def AtomicSubstitutions(structure, atomicSubstitutions, storeIntermediate = None
 
         newStructures, newDegeneracies = [], [];
 
-        for structure, degeneracy in zip(currentStructures, currentDegeneracies):
+        for j, (structure, degeneracy) in enumerate(zip(currentStructures, currentDegeneracies)):
             atomTypeNumbers = structure.GetAtomTypeNumbers();
 
             # Get the indices and site degeneracies of the unique atoms in the structure.
@@ -344,24 +341,36 @@ def AtomicSubstitutions(structure, atomicSubstitutions, storeIntermediate = None
 
                     newDegeneracies.append(degeneracy * siteDegeneracy);
 
-        if printProgressUpdate:
-            print("AtomicSubstitutions(): Substituted structure set contains {0} structure(s)".format(len(newStructures)));
-
         # Merge the new structure set.
 
         numStructures = len(newStructures);
 
-        # Disable comparing lattice vectors and atom types to avoid unnecessary comparisons.
+        if printProgressUpdate:
+            print("AtomicSubstitutions(): Substituted structure set contains {0} structure(s)".format(numStructures));
+
+            if StructureTools.ImportedTQDM:
+                print("");
+
+        newStructures, newDegeneracies = StructureTools.MergeStructureSet(
+            newStructures, newDegeneracies, tolerance = tolerance,
+            compareLatticeVectors = False, compareAtomTypes = False,
+            progressBar = printProgressUpdate
+            );
 
         newStructures, newDegeneracies = StructureTools.MergeStructureSet(
             newStructures, newDegeneracies, parentSymmetryOperations = parentSymmetryOperations, tolerance = tolerance,
-            compareLatticeVectors = False, compareAtomTypes = False
+            compareLatticeVectors = False, compareAtomTypes = False,
+            progressBar = printProgressUpdate
             );
+
+        if printProgressUpdate and StructureTools.ImportedTQDM:
+            print("");
 
         reductionCount = numStructures - len(newStructures);
 
         if printProgressUpdate and reductionCount > 0:
             print("AtomicSubstitutions(): Merging removed {0} structure(s)".format(reductionCount));
+            print("");
 
         # Check whether a progress update has been requested or we need to store this set of intermediate results.
         # If neither, we can avoid sorting the structures by spacegroup, and hence a potentially-large number of spglib calls.
@@ -374,8 +383,6 @@ def AtomicSubstitutions(structure, atomicSubstitutions, storeIntermediate = None
             # If printProgressUpdate is set, print a summary of the spacegroupGroups.
 
             if printProgressUpdate:
-                print("");
-
                 PrintSpacegroupGroupSummary(spacegroupGroups);
 
             # Store the result if required.

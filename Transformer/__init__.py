@@ -3,8 +3,8 @@
 __all__ = [
     "Constants",
     "ConvenienceFunctions",
-    "IO",
     "DevelopmentTools",
+    "IO",
     "Structure",
     "StructureTools"
     ];

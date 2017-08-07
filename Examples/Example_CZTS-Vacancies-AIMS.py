@@ -54,9 +54,9 @@ for vacancyAtom in 'Zn', 'Sn':
         resultSet, prefix = r"CZTS-{0}-Vacancy".format(vacancyAtom), workingDirectory = r"Example_CZTS-Vacancies", fileFormat = 'aims'
         );
 
-# Generate structures with one or two S vacancies.
+# Generate structures with up to four S vacancies.
 
-substitutions = [('S', None)] * 2;
+substitutions = [('S', None)] * 4;
 
 _, resultSet = AtomicSubstitutions(
     supercell, substitutions

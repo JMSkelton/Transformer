@@ -24,7 +24,7 @@ structure = ReadPOSCARFile("SnS-Pnma.vasp");
 supercell = structure.GetSupercell((2, 1, 2));
 
 # Evaluate the full set of S/Se solid soliutions.
-# This takes about 5 mins on a Core i5 iMac (Late 2014).
+# This takes 1-2 mins on a Core i5 iMac (Late 2014).
 
 solidSolutions = SolidSolution(supercell, 'S', 'Se');
 

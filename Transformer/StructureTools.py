@@ -13,6 +13,19 @@ from Transformer import Constants;
 
 from Transformer.Structure import Structure;
 
+# Try to import the tqdm function to display a progress bar in the MergeStructureSet() routine.
+
+ImportedTQDM = False;
+
+try:
+    from tqdm import tqdm;
+
+    ImportedTQDM = True;
+except ImportError:
+    warnings.warn("The tqdm module could not be imported -> displaying progress bars in MergeStructureSet() will be disabled.", RuntimeWarning);
+
+    pass;
+
 
 # -----------------
 # Sorting Functions
@@ -45,7 +58,7 @@ def GroupStructuresBySpacegroup(structures, degeneracies = None, tolerance = Non
 # Symmetry "Deduplication" Functions
 # ----------------------------------
 
-def MergeStructureSet(structures, degeneracies = None, parentSymmetryOperations = None, tolerance = None, compareLatticeVectors = True, compareAtomTypes = True):
+def MergeStructureSet(structures, degeneracies = None, parentSymmetryOperations = None, tolerance = None, compareLatticeVectors = True, compareAtomTypes = True, progressBar = False):
     # If the user does not set a tolerance, set it to the default value used by the Structure class.
 
     if tolerance == None:
@@ -63,69 +76,78 @@ def MergeStructureSet(structures, degeneracies = None, parentSymmetryOperations 
 
     removeIndices = set();
 
-    while pointer < len(structures) - 1:
-        if pointer not in removeIndices:
-            # Set a reference structure.
+    # Set up a primary iterator.
+    # If progressBar is set and the tqdm module is available, wrap it in the tqdm() function to display a progress bar.
 
-            structureRef = structures[pointer];
+    iValues = range(0, len(structures));
+
+    if ImportedTQDM and progressBar:
+        iValues = tqdm(iValues);
+
+    # Loop over reference structures.
+
+    for i in iValues:
+        if i not in removeIndices:
+            structureRef = structures[i];
 
             # List of symmetry-transformed structures to compare the remaining ones in the set to.
             # We use lazy initialisation to avoid unnecessary work.
 
-            compareStructures = None;
+            comparePositions = None;
 
             # Loop over structures to compare and remove duplicates.
 
-            for i in range(pointer + 1, len(structures)):
-                if i not in removeIndices:
-                    structure = structures[i];
+            # Testing shows that applying the symmetry operations of a parent structure (at least as implemented here) can be "assymetric", i.e. if trans(A) == B is false, trans(B) == A might be true.
+            # Therefore, for each reference structure, we compare to _all_ other structures that haven't been eliminated yet.
 
-                    if compareStructures == None:
+            for j in range(0, len(structures)):
+                if j != i and j not in removeIndices:
+                    structure = structures[j];
+
+                    if comparePositions is None:
                         # Initialise compareStructures.
 
+                        transformedStructures = None;
+
                         if parentSymmetryOperations != None:
-                            # If a set of symmetry operations were supplied, apply each one in turn to generate transformed structures to compare to the others in the set.
+                            # If a set of symmetry operations have been supplied, generate a set of symmetry-transformed structures to compare to.
 
-                            compareStructures = [
-                                structureRef.GetSymmetryTransform(rotation, translation)
-                                    for rotation, translation in parentSymmetryOperations
-                                ];
-
-                            # Prune compareStructures to remove duplicates; this can be a big performance boost for high-symmetry parent structures.
-
-                            compareStructures, _ = MergeStructureSet(
-                                compareStructures, tolerance = tolerance, compareLatticeVectors = False, compareAtomTypes = False
+                            transformedStructures = GenerateSymmetryTransformedStructures(
+                                structureRef, parentSymmetryOperations
                                 );
                         else:
-                            # If not, compare to the reference structure itself.
+                            # If not, compare against the original reference structure.
 
-                            compareStructures = [structureRef];
+                            transformedStructures = np.array(
+                                [structureRef.GetAtomDataNumPy()]
+                                );
 
-                    for compareStructure in compareStructures:
-                        # For testing equality, the atom positions are always compared, and the lattice vectors and atom types may also be compared depending on the parameters.
-                        # The order of the equivalence tests is set so as to perform the least computationally-demanding ones first.
+                        comparePositions = transformedStructures.view(dtype = np.float64).reshape((len(transformedStructures), structureRef.GetAtomCount(), 4))[:, :, 1:];
 
-                        remove = True;
+                    # If the compareLatticeVectors and/or compareAtomTypes flags are set, compare the lattice vectors/atom-type numbers first.
+                    # Even if the reference structure was "expanded" by symmetry operations, these comparisons onlt need to be performed once.
 
-                        if compareLatticeVectors:
-                            remove = compareStructure.CompareLatticeVectors(structure);
+                    remove = True;
 
-                        if remove and compareAtomTypes:
-                            remove = compareStructure.CompareAtomTypeNumbers(structure);
+                    if compareLatticeVectors:
+                        remove = structureRef.CompareLatticeVectors(structure);
 
-                        if remove:
-                            remove = compareStructure.CompareAtomPositions(structure);
+                    if remove and compareAtomTypes:
+                        remove = structureRef.CompareAtomTypeNumbers(structure);
 
-                        if remove:
-                            # If a structure is marked for removal, its degeneracy is added to that of the reference.
+                    if remove:
+                        compareResult = np.all(
+                            np.abs(comparePositions - structure.GetAtomPositionsNumPy(copy = False)) < tolerance, axis = (1, 2)
+                            );
 
-                            degeneracies[pointer] += degeneracies[i];
+                        remove = compareResult.any();
 
-                            removeIndices.add(i);
+                    if remove:
+                        # If a structure is marked for removal, its degeneracy is added to that of the reference.
 
-                            break;
+                        degeneracies[i] += degeneracies[j];
 
-        pointer += 1;
+                        removeIndices.add(j);
 
     # Remove marked structures and degeneracies from the lists.
 
@@ -157,3 +179,42 @@ def CartesianToFractionalCoordinates(latticeVectors, atomPositions):
     # Return the atom positions multiplied by the transformation matrix.
 
     return [np.dot(position, transformationMatrix) for position in atomPositions];
+
+def GenerateSymmetryTransformedStructures(structure, symmetryOperations):
+    # Get the atom data from the supplied Structure object.
+
+    atomData = structure.GetAtomDataNumPy(copy = False);
+
+    numAtoms = len(atomData);
+    numSymOps = len(symmetryOperations);
+
+    # Create an N_ops x N_a NumPy array of the Structure._AtomDataType data structure and initialise it with the atom data.
+
+    transformedStructures = np.zeros(
+        (numSymOps, numAtoms), dtype = Structure._AtomDataType
+        );
+
+    transformedStructures[:] = atomData;
+
+    transformedPositions = transformedStructures.view(dtype = np.float64).reshape((numSymOps, numAtoms, 4))[:, :, 1:];
+
+    # Loop over symmetry operations and transform the positions in each block of data.
+
+    for i, (rotation, translation) in enumerate(symmetryOperations):
+        # Apply the rotation and translation.
+
+        transformedPositions[i] = np.einsum('jk,ik', rotation, transformedPositions[i]) + translation;
+
+    # Clamp the modified positions to the range [0, 1].
+
+    transformedPositions %= 1.0;
+
+    # Sort the data blocks.
+
+    for i in range(0, numSymOps):
+        transformedStructures[i].sort();
+
+    # Eliminate redundant transformed structures.
+    # With small numbers of symmetry operations, this provides little benefit, but does not seem to degrade performance either.
+
+    return np.unique(transformedStructures, axis = 0);

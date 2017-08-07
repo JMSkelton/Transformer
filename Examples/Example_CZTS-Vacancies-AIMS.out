@@ -2,6 +2,7 @@ AtomicSubstitutions(): Performing substitution 1 (Cu -> None)
 AtomicSubstitutions(): Initial structure set contains 1 structure(s)
 AtomicSubstitutions(): Substituted structure set contains 2 structure(s)
 
+
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
 81  P-4          |               16 |                2
@@ -9,6 +10,8 @@ AtomicSubstitutions(): Substituted structure set contains 2 structure(s)
 AtomicSubstitutions(): Performing substitution 2 (Cu -> None)
 AtomicSubstitutions(): Initial structure set contains 2 structure(s)
 AtomicSubstitutions(): Substituted structure set contains 10 structure(s)
+
+
 AtomicSubstitutions(): Merging removed 1 structure(s)
 
    Spacegroup    |   # Structures   |     # Unique    
@@ -30,6 +33,7 @@ AtomicSubstitutions(): Performing substitution 1 (Zn -> None)
 AtomicSubstitutions(): Initial structure set contains 1 structure(s)
 AtomicSubstitutions(): Substituted structure set contains 1 structure(s)
 
+
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
 81  P-4          |                8 |                1
@@ -44,6 +48,7 @@ AtomicSubstitutions(): All substitutions performed.
 AtomicSubstitutions(): Performing substitution 1 (Sn -> None)
 AtomicSubstitutions(): Initial structure set contains 1 structure(s)
 AtomicSubstitutions(): Substituted structure set contains 1 structure(s)
+
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
@@ -60,6 +65,7 @@ AtomicSubstitutions(): Performing substitution 1 (S -> None)
 AtomicSubstitutions(): Initial structure set contains 1 structure(s)
 AtomicSubstitutions(): Substituted structure set contains 1 structure(s)
 
+
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
 1   P1           |               32 |                1
@@ -68,11 +74,39 @@ AtomicSubstitutions(): Performing substitution 2 (S -> None)
 AtomicSubstitutions(): Initial structure set contains 1 structure(s)
 AtomicSubstitutions(): Substituted structure set contains 31 structure(s)
 
+
+AtomicSubstitutions(): Merging removed 4 structure(s)
+
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
 4   P2_1         |              128 |                4
 3   P2           |              128 |                4
-1   P1           |              736 |               23
+1   P1           |              736 |               19
+
+AtomicSubstitutions(): Performing substitution 3 (S -> None)
+AtomicSubstitutions(): Initial structure set contains 27 structure(s)
+AtomicSubstitutions(): Substituted structure set contains 645 structure(s)
+
+
+AtomicSubstitutions(): Merging removed 372 structure(s)
+
+   Spacegroup    |   # Structures   |     # Unique    
+------------------------------------------------------
+1   P1           |           29,760 |              273
+
+AtomicSubstitutions(): Performing substitution 4 (S -> None)
+AtomicSubstitutions(): Initial structure set contains 273 structure(s)
+AtomicSubstitutions(): Substituted structure set contains 7917 structure(s)
+
+
+AtomicSubstitutions(): Merging removed 5741 structure(s)
+
+   Spacegroup    |   # Structures   |     # Unique    
+------------------------------------------------------
+81  P-4          |            1,536 |                8
+4   P2_1         |           10,368 |               30
+3   P2           |            8,832 |               40
+1   P1           |          842,304 |            2,098
 
 AtomicSubstitutions(): All substitutions performed.
 
@@ -80,11 +114,14 @@ AtomicSubstitutions(): All substitutions performed.
 ----------------------------------------------------------------------
 0   None         |               1 |               1 |               1
 1   S    -> None |               1 |              32 |              32
-2   S    -> None |              31 |             992 |             992
+2   S    -> None |              27 |             992 |             992
+3   S    -> None |             273 |          29,760 |          29,760
+4   S    -> None |           2,176 |         863,040 |         863,040
 
 AtomicSubstitutions(): Performing substitution 1 (Cu -> None)
 AtomicSubstitutions(): Initial structure set contains 1 structure(s)
 AtomicSubstitutions(): Substituted structure set contains 2 structure(s)
+
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
@@ -93,6 +130,8 @@ AtomicSubstitutions(): Substituted structure set contains 2 structure(s)
 AtomicSubstitutions(): Performing substitution 2 (Cu -> None)
 AtomicSubstitutions(): Initial structure set contains 2 structure(s)
 AtomicSubstitutions(): Substituted structure set contains 10 structure(s)
+
+
 AtomicSubstitutions(): Merging removed 1 structure(s)
 
    Spacegroup    |   # Structures   |     # Unique    
@@ -105,6 +144,7 @@ AtomicSubstitutions(): Merging removed 1 structure(s)
 AtomicSubstitutions(): Performing substitution 3 (S -> None)
 AtomicSubstitutions(): Initial structure set contains 9 structure(s)
 AtomicSubstitutions(): Substituted structure set contains 152 structure(s)
+
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
@@ -123,6 +163,7 @@ AtomicSubstitutions(): Performing substitution 1 (Zn -> None)
 AtomicSubstitutions(): Initial structure set contains 1 structure(s)
 AtomicSubstitutions(): Substituted structure set contains 1 structure(s)
 
+
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
 81  P-4          |                8 |                1
@@ -130,6 +171,7 @@ AtomicSubstitutions(): Substituted structure set contains 1 structure(s)
 AtomicSubstitutions(): Performing substitution 2 (S -> None)
 AtomicSubstitutions(): Initial structure set contains 1 structure(s)
 AtomicSubstitutions(): Substituted structure set contains 8 structure(s)
+
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
@@ -147,6 +189,7 @@ AtomicSubstitutions(): Performing substitution 1 (Sn -> None)
 AtomicSubstitutions(): Initial structure set contains 1 structure(s)
 AtomicSubstitutions(): Substituted structure set contains 1 structure(s)
 
+
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
 81  P-4          |                8 |                1
@@ -155,6 +198,7 @@ AtomicSubstitutions(): Performing substitution 2 (S -> None)
 AtomicSubstitutions(): Initial structure set contains 1 structure(s)
 AtomicSubstitutions(): Substituted structure set contains 8 structure(s)
 
+
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
 1   P1           |              256 |                8
@@ -162,12 +206,14 @@ AtomicSubstitutions(): Substituted structure set contains 8 structure(s)
 AtomicSubstitutions(): Performing substitution 3 (S -> None)
 AtomicSubstitutions(): Initial structure set contains 8 structure(s)
 AtomicSubstitutions(): Substituted structure set contains 248 structure(s)
-AtomicSubstitutions(): Merging removed 28 structure(s)
+
+
+AtomicSubstitutions(): Merging removed 120 structure(s)
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
 3   P2           |              256 |                8
-1   P1           |            7,680 |              212
+1   P1           |            7,680 |              120
 
 AtomicSubstitutions(): All substitutions performed.
 
@@ -176,5 +222,5 @@ AtomicSubstitutions(): All substitutions performed.
 0   None         |               1 |               1 |               1
 1   Sn   -> None |               - |               - |               8
 2   S    -> None |               - |               - |             256
-3   S    -> None |             220 |           7,936 |           7,936
+3   S    -> None |             128 |           7,936 |           7,936
 

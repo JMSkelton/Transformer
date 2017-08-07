@@ -188,9 +188,10 @@ def WritePOSCARFile(structure, filePath, atomicSymbolLookupTable = None):
         for x, y, z in structure.GetAtomPositions():
             outputWriter.write("  {0: >21.16f}  {1: >21.16f} {2: >21.16f}\n".format(x, y, z));
 
-# ---------------
-# FHI-AIMS Output
-# ---------------
+
+# ---------------------
+# FHI-AIMS Input/Output
+# ---------------------
 
 def ReadAIMSGeometryFile(filePath):
     # Variables to collect.
