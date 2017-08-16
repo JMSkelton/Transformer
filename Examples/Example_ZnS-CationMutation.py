@@ -7,7 +7,10 @@
 # Import routines from Transformer.
 
 from Transformer.IO import ReadPOSCARFile;
-from Transformer.ConvenienceFunctions import AtomicSubstitutions, PrintSpacegroupGroupSummary, ExportResultSet;
+from Transformer.Utilities import PrintSpacegroupGroupSummary;
+
+from Transformer.ConvenienceFunctions.BatchIO import ExportResultSet;
+from Transformer.ConvenienceFunctions.Substitutions import AtomicSubstitutions;
 
 
 # ----

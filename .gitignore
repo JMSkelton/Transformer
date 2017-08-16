@@ -3,7 +3,6 @@
 Transformer/*.pyc
 Transformer/__pycache__/
 
-# Test folder.
-
-Test/
+Transformer/*/*.pyc
+Transformer/*/__pycache__/
 

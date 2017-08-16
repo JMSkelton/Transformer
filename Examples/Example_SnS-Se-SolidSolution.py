@@ -8,7 +8,9 @@
 # Import routines from Transformer.
 
 from Transformer.IO import ReadPOSCARFile;
-from Transformer.ConvenienceFunctions import SolidSolution, ExportResultSet;
+
+from Transformer.ConvenienceFunctions.BatchIO import ExportResultSet;
+from Transformer.ConvenienceFunctions.Substitutions import SolidSolution;
 
 
 # ----

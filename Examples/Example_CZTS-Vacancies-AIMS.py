@@ -8,7 +8,9 @@
 # Import routines from Transformer.
 
 from Transformer.IO import ReadAIMSGeometryFile;
-from Transformer.ConvenienceFunctions import AtomicSubstitutions, ExportResultSet;
+
+from Transformer.ConvenienceFunctions.BatchIO import ExportResultSet;
+from Transformer.ConvenienceFunctions.Substitutions import AtomicSubstitutions;
 
 
 # ----

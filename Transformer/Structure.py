@@ -15,7 +15,7 @@ try:
 
     import spglib as spg;
 except ImportError:
-    # Nwwer spglib versions.
+    # Newer spglib versions.
 
     from pyspglib import spglib as spg;
 

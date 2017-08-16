@@ -18,8 +18,8 @@ except ImportError:
 
     from pyspglib import spglib as spg;
 
-import Transformer.Constants as Constants;
-import Transformer.StructureTools as StructureTools;
+from Transformer import Constants;
+from Transformer import Utilities;
 
 from Transformer.Structure import Structure;
 
@@ -142,7 +142,7 @@ def ReadPOSCARFile(filePath):
     # If the atom positions are given in Cartesian coordinates, convert them to fractional coordinates.
 
     if coordinateType == 'c':
-        atomPositions = StructureTools.CartesianToFractionalCoordinates(latticeVectors, atomPositions);
+        atomPositions = Utilities.CartesianToFractionalCoordinates(latticeVectors, atomPositions);
 
     # Return a Structure object.
 
@@ -238,7 +238,7 @@ def ReadAIMSGeometryFile(filePath):
 
     # Convert the atom positions from Cartesian to fractional coordinates.
 
-    atomPositions = StructureTools.CartesianToFractionalCoordinates(latticeVectors, atomPositions);
+    atomPositions = Utilities.CartesianToFractionalCoordinates(latticeVectors, atomPositions);
 
     # Return a Structure object.
 

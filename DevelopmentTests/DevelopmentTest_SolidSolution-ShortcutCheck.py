@@ -8,7 +8,10 @@
 # Import routines from Transformer.
 
 from Transformer.IO import ReadPOSCARFile;
-from Transformer.ConvenienceFunctions import SolidSolution, ExportResultSet, ImportResultSet;
+
+from Transformer.ConvenienceFunctions.BatchIO import ExportResultSet, ImportResultSet;
+from Transformer.ConvenienceFunctions.Substitutions import SolidSolution;
+
 from Transformer.DevelopmentTools import MapResultSetStructures;
 
 
@@ -29,7 +32,7 @@ supercell = structure.GetSupercell((2, 1, 2));
 solidSolutions = SolidSolution(supercell, 'S', 'Se', useShortcut = False);
 
 ExportResultSet(
-    solidSolutions, prefix = "SnS-Se-SolidSolution", workingDirectory = r"Dev_SolidSolution-ShortcutCheck"
+    solidSolutions, prefix = "SnS-Se-SolidSolution", workingDirectory = r"DevelopmentTest_SolidSolution-ShortcutCheck"
     );
 
 # Evaluate the solid soliutions again with useShortcut = True and export.
@@ -37,13 +40,13 @@ ExportResultSet(
 solidSolutions = SolidSolution(supercell, 'S', 'Se', useShortcut = True);
 
 ExportResultSet(
-    solidSolutions, prefix = "SnS-Se-SolidSolution-Shortcut", workingDirectory = r"Dev_SolidSolution-ShortcutCheck"
+    solidSolutions, prefix = "SnS-Se-SolidSolution-Shortcut", workingDirectory = r"DevelopmentTest_SolidSolution-ShortcutCheck"
     );
 
 # Read in both sets of results.
 
-resultSets1 = ImportResultSet(prefix = "SnS-Se-SolidSolution", directory = r"Dev_SolidSolution-ShortcutCheck");
-resultSets2 = ImportResultSet(prefix = "SnS-Se-SolidSolution-Shortcut", directory = r"Dev_SolidSolution-ShortcutCheck");
+resultSets1 = ImportResultSet(prefix = "SnS-Se-SolidSolution", directory = r"DevelopmentTest_SolidSolution-ShortcutCheck");
+resultSets2 = ImportResultSet(prefix = "SnS-Se-SolidSolution-Shortcut", directory = r"DevelopmentTest_SolidSolution-ShortcutCheck");
 
 # Run an exhaustive setwise comparison.
 
