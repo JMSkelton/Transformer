@@ -39,7 +39,6 @@ There are also a set of more advanved "development tests" in the [Development Te
 TODO List
 =========
 
-* Add `multiprocessing` support.
 * Add a convenience function for Schottky defects.
 * Add functionality for identifying interstitial sites for Frenkel defects.
 
