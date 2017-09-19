@@ -7,10 +7,10 @@
 
 # Import routines from Transformer.
 
-from Transformer.IO import ReadPOSCARFile;
+from Transformer.IO.VASP import ReadPOSCARFile;
 
-from Transformer.ConvenienceFunctions.BatchIO import ExportResultSet, ImportResultSet;
-from Transformer.ConvenienceFunctions.Substitutions import SolidSolution;
+from Transformer.Framework.BatchIO import ExportResultSet, ImportResultSet;
+from Transformer.Framework.Convenience import SolidSolution;
 
 from Transformer.DevelopmentTools import MapResultSetStructures;
 

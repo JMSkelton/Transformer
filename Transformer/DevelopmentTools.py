@@ -7,14 +7,20 @@
 
 import numpy as np;
 
-from Transformer import StructureTools;
+from Transformer import StructureSet;
 
-# If available, import the Cython-optimised merging routines from the _StructureTools module.
+# If available, import the Cython-optimised merging routines from the _Merge module.
 
-if StructureTools.CythonImports:
-    from Transformer import _StructureTools;
+_Cython = False;
 
-from Transformer import Structure;
+try:
+    from Transformer import _StructureSet;
+
+    _Cython = True;
+except ImportError:
+    pass;
+
+from Transformer.Structure import Structure;
 
 
 # ---------
@@ -25,7 +31,7 @@ def MapResultSetStructures(parentStructure, structures1, structures2, compareLat
     # If tolerance is not set, set it to the default from the Structure class.
 
     if tolerance == None:
-        tolerance = Structure.Structure.DefaultSymmetryEquivalenceTolerance;
+        tolerance = Structure.DefaultSymmetryEquivalenceTolerance;
 
     # Take the symmetry operations from the parent structure.
 
@@ -36,6 +42,12 @@ def MapResultSetStructures(parentStructure, structures1, structures2, compareLat
     structureMappings = [];
 
     for i, refStructure in enumerate(structures1):
+        refAtomCount = refStructure.GetAtomCount();
+
+        # Range of atom indices to compare positions over.
+
+        indexRange = [(0, refAtomCount)];
+
         # Expand the reference structure to a set of comparison structures by applying the parent symmetry operations.
 
         comparePositions = None;
@@ -45,11 +57,13 @@ def MapResultSetStructures(parentStructure, structures1, structures2, compareLat
         indices = [];
 
         for j, compareStructure in enumerate(structures2):
-            equivalent = True;
+            # First, check the two structures have the same number of atoms.
+
+            equivalent = compareStructure.GetAtomCount() == refAtomCount;
 
             # Depending on whether compareLatticeVectors/compareAtomTypes are set, compare the lattice vectors and/or atom-type numbers.
 
-            if compareLatticeVectors:
+            if equivalent and compareLatticeVectors:
                 equivalent = refStructure.CompareLatticeVectors(compareStructure, tolerance = tolerance);
 
             if equivalent and compareAtomTypes:
@@ -63,27 +77,25 @@ def MapResultSetStructures(parentStructure, structures1, structures2, compareLat
                 if comparePositions is None:
                     # If possible, use the Cython-optimised symmetry-transformation routine.
 
-                    if StructureTools.CythonImports:
-                        comparePositions = _StructureTools._MergeStructureSet_GenerateSymmetryTransformedPositions(
-                            refStructure, parentSymmetryOperations
+                    if _Cython:
+                        comparePositions = _StructureSet._GenerateSymmetryTransformedPositions(
+                            refStructure, parentSymmetryOperations, tolerance
                             );
                     else:
-                        comparePositions = StructureTools._MergeStructureSet_GenerateSymmetryTransformedPositions(
-                            refStructure, parentSymmetryOperations
+                        comparePositions = StructureSet._GenerateSymmetryTransformedPositions(
+                            refStructure, parentSymmetryOperations, tolerance
                             );
 
-                if StructureTools.CythonImports:
+                if _Cython:
                     # If possible, use the Cython-optimised comparison routine.
 
-                    equivalent = _StructureTools._MergeStructureSet_ComparePositions(
-                        compareStructure.GetAtomPositionsNumPy(copy = False), comparePositions, tolerance
+                    equivalent = _StructureSet._CompareAtomPositions(
+                        compareStructure.GetAtomPositionsNumPy(copy = False), comparePositions, tolerance, indexRange
                         );
                 else:
-                    compareResult = np.all(
-                        np.abs(comparePositions - compareStructure.GetAtomPositionsNumPy(copy = False)) < tolerance, axis = (1, 2)
+                    equivalent = StructureSet._CompareAtomPositions(
+                        compareStructure.GetAtomPositionsNumPy(copy = False), comparePositions, tolerance, indexRange
                         );
-
-                    equivalent = compareResult.any();
 
             if equivalent:
                 indices.append(j);

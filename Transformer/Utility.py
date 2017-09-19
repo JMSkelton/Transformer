@@ -21,29 +21,27 @@ def CartesianToFractionalCoordinates(latticeVectors, atomPositions):
 
     return [np.dot(position, transformationMatrix) for position in atomPositions];
 
-def GetCommonDivisor(integers):
-    commonDivisor = 1;
+def GroupStructuresBySpacegroup(structures, degeneracies = None, tolerance = None):
+    spacegroupGroups = { };
 
-    hasDivisor = True;
+    for i, structure in enumerate(structures):
+        # spacegroupGroups will be keyed by tules of (spacegroupNumber, spacegroupSymbol), as returned by the Structure.GetSpacegroup() routine.
 
-    while hasDivisor:
-        # Iteratively divide through by the smallest value until the common divisor found.
+        key = structure.GetSpacegroup(tolerance = tolerance);
 
-        divisor = min(integers);
+        if key in spacegroupGroups:
+            groupStructures, groupDegeneracies = spacegroupGroups[key];
 
-        if divisor == 1:
-            break;
+            groupStructures.append(structure);
 
-        for value in integers:
-            if value % divisor != 0:
-                hasDivisor = False;
-                break;
+            if degeneracies != None:
+                groupDegeneracies.append(degeneracies[i]);
+        else:
+            spacegroupGroups[key] = (
+                [structure], [degeneracies[i]] if degeneracies != None else None
+                );
 
-        if hasDivisor:
-            commonDivisor = commonDivisor * divisor;
-            integers = [integer // divisor for integer in integers];
-
-    return commonDivisor;
+    return spacegroupGroups;
 
 def PrintSpacegroupGroupSummary(spacegroupGroups):
     # Sort the dictionary keys.

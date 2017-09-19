@@ -106,6 +106,7 @@ class Structure:
         self._pAtomPositionsCartesian = None;
 
         self._pAtomicSymbolsCounts = None;
+        self._pAtomIndexRanges = None;
         self._pChemicalFormula = None;
 
     def _PerformSymmetryAnalysis(self, tolerance = None):
@@ -250,7 +251,7 @@ class Structure:
         if index >= numAtoms:
             raise Exception("Error: Index {0} is out of range for number of atoms {1}.".format(index, numAtoms));
 
-        # Convert to atomType number to an atom-type number.
+        # Convert atomType to an atom-type number.
 
         atomTypeNumber = AtomTypeToAtomTypeNumber(atomType);
 
@@ -401,11 +402,6 @@ class Structure:
         return (np.abs(atomPositions1 - atomPositions2) <= tolerance).all();
 
     def CompareStructure(self, structure, tolerance = None):
-        # If no equivalence tolerance is supplied, use the default.
-
-        if tolerance == None:
-            tolerance = Structure.DefaultSymmetryEquivalenceTolerance;
-
         # Fastest check: the lattice vectors are the same.
 
         if not self.CompareLatticeVectors(structure, tolerance = tolerance):
@@ -428,13 +424,6 @@ class Structure:
     # ---------------
     # Utility Methods
     # ---------------
-
-    def Clone(self):
-        # Given the way the constructor works, all the fields except the name (which is immutable anyway) should be deep copied.
-
-        return Structure(
-            self._latticeVectors, self._atomPositionsView, self._atomTypeNumbersView, name = self._name
-            );
 
     def GetAtomPositionsCartesian(self):
         # Convert the atom positions to Cartesian coordinates and return as a list of NumPy arrays.
@@ -499,6 +488,32 @@ class Structure:
 
         return (atomicSymbols, atomCounts);
 
+    def GetAtomIndexRanges(self):
+        # If the internal _pAtomIndexRanges has not been initialised, initialise it.
+
+        if self._pAtomIndexRanges == None:
+            atomTypeNumbers = self._atomTypeNumbersView;
+
+            atomIndexRanges = { };
+
+            currentStartIndex, currentAtomTypeNumber = None, None;
+
+            for i, atomTypeNumber in enumerate(atomTypeNumbers):
+                if atomTypeNumber != currentAtomTypeNumber:
+                    if currentAtomTypeNumber != None:
+                        atomIndexRanges[currentAtomTypeNumber] = (currentStartIndex, i);
+
+                    currentStartIndex = i;
+                    currentAtomTypeNumber = atomTypeNumber;
+
+            atomIndexRanges[currentAtomTypeNumber] = (currentStartIndex, len(atomTypeNumbers));
+
+            self._pAtomIndexRanges = atomIndexRanges;
+
+        # Return a deep copy of _pAtomIndexRanges.
+
+        return { key : value for key, value in self._pAtomIndexRanges.items() };
+
     def GetChemicalFormula(self, atomicSymbolLookupTable = None):
         # If atomicSymbolLookupTable is not provided and the internal _pChemicalFormula has been initialised, return a copy of that.
 
@@ -517,6 +532,17 @@ class Structure:
             self._pChemicalFormula = chemicalFormula;
 
         return self._pChemicalFormula;
+
+    # --------------------
+    # Manipulation Methods
+    # --------------------
+
+    def Clone(self):
+        # Given the way the constructor works, all the fields except the name (which is immutable anyway) should be deep copied.
+
+        return Structure(
+            self._latticeVectors, self._atomPositionsView, self._atomTypeNumbersView, name = self._name
+            );
 
     def GetSupercell(self, supercellDim):
         dimA, dimB, dimC = supercellDim;
@@ -592,6 +618,39 @@ class Structure:
         return Structure(
             newLatticeVectors, newAtomPositions, newAtomTypeNumbers, name = newName
             );
+
+    def GetUniqueAtomicSubstitutions(self, atomType1, atomType2, tolerance = None):
+        # Convert atomTypes to a atom-type numbers.
+
+        atomTypeNumber1 = AtomTypeToAtomTypeNumber(atomType1);
+        atomTypeNumber2 = AtomTypeToAtomTypeNumber(atomType2);
+
+        atomTypeNumbers = self._atomTypeNumbersView;
+
+        # Get the indices and site degeneracies of the unique atoms in the structure.
+
+        uniqueAtomIndices, siteDegeneracies = self.GetUniqueAtomIndices(tolerance = tolerance);
+
+        # Generate substituted structures.
+
+        structures, degeneracies = [], [];
+
+        for atomIndex, siteDegeneracy in zip(uniqueAtomIndices, siteDegeneracies):
+            if atomTypeNumbers[atomIndex] == atomTypeNumber1:
+                # Clone the current structure.
+
+                newStructure = self.Clone();
+
+                # Perform the substitution.
+
+                newStructure.SetAtom(atomIndex, atomTypeNumber2);
+
+                # Add the new structure and the site degeneracy to the lists.
+
+                structures.append(newStructure);
+                degeneracies.append(siteDegeneracy);
+
+        return (structures, degeneracies);
 
     # -------------
     # Static Fields

@@ -1,4 +1,4 @@
-# Transformer/ConvenienceFunctions/BatchIO.py by J. M. Skelton
+# Transformer/Framework/BatchIO.py by J. M. Skelton
 
 
 # -------
@@ -10,8 +10,7 @@ import re;
 import tarfile;
 import warnings;
 
-from Transformer import IO;
-from Transformer import Utilities;
+from Transformer.IO import VASP, AIMS;
 
 
 # ----------------
@@ -87,7 +86,7 @@ def ExportResultSet(resultSet, prefix = None, atomicSymbolLookupTable = None, wo
             _, degeneracies = spacegroupGroups[key];
             mergedDegeneracies = mergedDegeneracies + degeneracies;
 
-        commonDivisor = Utilities.GetCommonDivisor(mergedDegeneracies);
+        commonDivisor = _GetCommonDivisor(mergedDegeneracies);
 
         # Output and archive the structures.
 
@@ -120,9 +119,9 @@ def ExportResultSet(resultSet, prefix = None, atomicSymbolLookupTable = None, wo
                     fileName = "{0}_SG-{1}_{2:0>4}{3}".format(chemicalFormula, spacegroupNumber, i + 1, ExportFileFormats[fileFormat]);
 
                     if fileFormat == 'vasp':
-                        IO.WritePOSCARFile(structure, _ExportResultSet_TemporaryFileName);
+                        VASP.WritePOSCARFile(structure, _ExportResultSet_TemporaryFileName);
                     elif fileFormat == 'aims':
-                        IO.WriteAIMSGeometryFile(structure, _ExportResultSet_TemporaryFileName);
+                        AIMS.WriteAIMSGeometryFile(structure, _ExportResultSet_TemporaryFileName);
 
                     archiveFile.add(
                         _ExportResultSet_TemporaryFileName, arcname = "{0}/{1}/{2}".format(archiveName, subfolderName, fileName) if subfolderName != None else "{0}/{1}".format(archiveName, fileName)
@@ -175,9 +174,9 @@ def ImportResultSetArchive(filePath):
             structure = None;
 
             if fileType == 'vasp':
-                structure = IO.ReadPOSCARFile(_ImportResultSetArchive_TemporaryFileName);
+                structure = VASP.ReadPOSCARFile(_ImportResultSetArchive_TemporaryFileName);
             elif fileType == 'aims':
-                structure = IO.ReadAIMSGeometryFile(_ImportResultSetArchive_TemporaryFileName);
+                structure = AIMS.ReadAIMSGeometryFile(_ImportResultSetArchive_TemporaryFileName);
 
             structures.append(structure);
 
@@ -197,7 +196,7 @@ def ImportResultSetArchive(filePath):
                 elif fileType == 'aims':
                     # For other file formats, the name is written as a comment.
 
-                    with open(_ImportExportTemporaryFileName, 'r') as inputReader:
+                    with open(_ImportResultSetArchive_TemporaryFileName, 'r') as inputReader:
                         for line in inputReader:
                             match = _ImportResultSetArchive_StructureNameRegex.search(line);
 
@@ -351,3 +350,32 @@ def ImportResultSet(prefix = None, directory = "./"):
     # Return the result set.
 
     return resultSet;
+
+
+# -----------------
+# Utility Functions
+# -----------------
+
+def _GetCommonDivisor(integers):
+    commonDivisor = 1;
+
+    hasDivisor = True;
+
+    while hasDivisor:
+        # Iteratively divide through by the smallest value until the common divisor found.
+
+        divisor = min(integers);
+
+        if divisor == 1:
+            break;
+
+        for value in integers:
+            if value % divisor != 0:
+                hasDivisor = False;
+                break;
+
+        if hasDivisor:
+            commonDivisor = commonDivisor * divisor;
+            integers = [integer // divisor for integer in integers];
+
+    return commonDivisor;

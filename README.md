@@ -3,19 +3,19 @@ Transformer
 
 `Transformer` is a Python library for transforming structures by performing atomic substitutions.
 
-The package exposes a set of "convenience functions" for performing common operations, including generating solid solutions and antisite defects, and batch-exporting result sets.
+The package exposes a framework of "convenience functions" for performing common operations, including generating solid solutions and antisite defects, and batch-importing/exporting result sets.
 
 The logic used to build up these routines is separated into lower-level "primitives" that can be used to program more advanced tasks.
-
-The routines make use of crystal symmetry (via `spglib` - [Ref. 1](#Ref1)) to avoid, at least in most cases, computing and storing large sets of intermediate structures.
-The core `Structure` object uses an optimised data layout (via `NumPy` - [Ref. 2](#Ref2)) for efficiency.
 
 Installation
 ============
 
 The `Transformer` library works in Python >= 2.7 and Python 3 (tested on macOS), and just needs to be placed in the package search path to work (e.g. add to `PYTHONPATH`).
 
-The library requires the `NumPy` and `spglib` packages; both can be installed using `pip` on Linux/macOS, or built from source (see links to code documentation in [Ref. 1](#Ref1) and [Ref. 2](#Ref2)).
+The library requires the `NumPy` ([Ref. 1](#Ref1)) and `spglib` ([Ref. 2](#Ref2)) packages; both can be installed using `pip` on Linux/macOS, or built from source (see links to code documentation).
+
+Installing the `Cython` ([Ref. 3](#Ref3)) and `tqdm` ([Ref. 4](#Ref4)) packages (both also available *via* `pip`) enables optional performance enhancements and "eye candy", respectively.
+`Cython` in particular is highly recommended, as it allows core routines to be replaced by optimised C routines that lead to substantial performance enhancements.
 
 Examples
 ========
@@ -47,3 +47,5 @@ References
 
 1. <a name="Ref1"></a>[https://atztogo.github.io/spglib/](https://atztogo.github.io/spglib/)
 2. <a name="Ref2"></a>[http://www.numpy.org/](http://www.numpy.org/)
+3. <a name="Ref3"></a>[http://cython.org/](http://cython.org/)
+4. <a name="Ref4"></a>[https://pypi.python.org/pypi/tqdm](https://pypi.python.org/pypi/tqdm); [https://github.com/noamraph/tqdm](https://github.com/noamraph/tqdm)

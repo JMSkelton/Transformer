@@ -7,10 +7,10 @@
 
 # Import routines from Transformer.
 
-from Transformer.IO import ReadAIMSGeometryFile;
+from Transformer.IO.AIMS import ReadAIMSGeometryFile;
 
-from Transformer.ConvenienceFunctions.BatchIO import ExportResultSet;
-from Transformer.ConvenienceFunctions.Substitutions import AtomicSubstitutions;
+from Transformer.Framework.BatchIO import ExportResultSet;
+from Transformer.Framework.Core import AtomicSubstitutions;
 
 
 # ----

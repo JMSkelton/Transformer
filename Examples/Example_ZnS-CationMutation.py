@@ -6,11 +6,12 @@
 
 # Import routines from Transformer.
 
-from Transformer.IO import ReadPOSCARFile;
-from Transformer.Utilities import PrintSpacegroupGroupSummary;
+from Transformer.Utility import PrintSpacegroupGroupSummary;
 
-from Transformer.ConvenienceFunctions.BatchIO import ExportResultSet;
-from Transformer.ConvenienceFunctions.Substitutions import AtomicSubstitutions;
+from Transformer.IO.VASP import ReadPOSCARFile;
+
+from Transformer.Framework.BatchIO import ExportResultSet;
+from Transformer.Framework.Core import AtomicSubstitutions;
 
 
 # ----
