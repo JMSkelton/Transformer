@@ -248,8 +248,6 @@ class StructureSet:
         if structureSet == None:
             raise Excpetion("Error: structureSet cannot be None.");
 
-        structureSet, degeneracySet = structureSet.GetStructures(), structureSet.GetDegeneracies();
-
         compareMaxIndex = None;
 
         # Technically, a union operation is only valid when the calling and argument structure sets are configured with the same equality comparisons.
@@ -257,13 +255,13 @@ class StructureSet:
         # If not, issue a warning and default to the behaviour Update() method.
 
         if self.CompareEquivalenceSettings(structureSet):
-            compareMaxIndex = len(self._structuresSet);
+            compareMaxIndex = len(self._structureSet);
         else:
             warnings.warn("UpdateUnion() is only valid when the supplied StructureSet object is set to use the same equality-comparison settings as the calling object.", UserWarning);
 
-        return self._AddStructures(structureSet, degeneracySet, compareMaxIndex = compareMaxIndex);
+        return self._AddStructures(structureSet.GetStructures(), structureSet.GetDegeneracies(), compareMaxIndex = compareMaxIndex);
 
-    def CompareEquivalenceSettings(structureSet):
+    def CompareEquivalenceSettings(self, structureSet):
         equivalent = True;
 
         equivalent = equivalent and (self._compareLatticeVectors == structureSet._compareLatticeVectors);

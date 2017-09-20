@@ -1,4 +1,4 @@
-# Transformer/DevelopmentTools.py by J. M. Skelton
+# Transformer/Utilities/DevelopmentTools.py by J. M. Skelton
 
 
 # -------
@@ -9,7 +9,7 @@ import numpy as np;
 
 from Transformer import StructureSet;
 
-# If available, import the Cython-optimised merging routines from the _Merge module.
+# If available, import the Cython-optimised merging routines from the _StructureSet module.
 
 _Cython = False;
 

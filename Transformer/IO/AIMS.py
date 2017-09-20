@@ -5,9 +5,9 @@
 # Imports
 # -------
 
-from Transformer import Utility;
-
 from Transformer.Structure import Structure;
+
+from Transformer.Utilities import StructureTools;
 
 
 # ---------
@@ -59,7 +59,7 @@ def ReadAIMSGeometryFile(filePath):
 
     # Convert the atom positions from Cartesian to fractional coordinates.
 
-    atomPositions = Utility.CartesianToFractionalCoordinates(latticeVectors, atomPositions);
+    atomPositions = StructureTools.CartesianToFractionalCoordinates(latticeVectors, atomPositions);
 
     # Return a Structure object.
 

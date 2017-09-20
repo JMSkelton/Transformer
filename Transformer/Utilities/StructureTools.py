@@ -1,4 +1,4 @@
-# Transformer/Utilities.py by J. M. Skelton
+# Transformer/Utilities/StructureTools.py by J. M. Skelton
 
 
 # -------

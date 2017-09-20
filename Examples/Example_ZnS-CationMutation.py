@@ -1,17 +1,18 @@
 # Example_ZnS-CationMutation.py by J. M. Skelton
 
+
 # -------
 # Imports
 # -------
 
 # Import routines from Transformer.
 
-from Transformer.Utility import PrintSpacegroupGroupSummary;
-
 from Transformer.IO.VASP import ReadPOSCARFile;
 
 from Transformer.Framework.BatchIO import ExportResultSet;
 from Transformer.Framework.Core import AtomicSubstitutions;
+
+from Transformer.Utilities.StructureTools import PrintSpacegroupGroupSummary;
 
 
 # ----

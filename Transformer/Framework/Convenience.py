@@ -9,9 +9,10 @@ import multiprocessing;
 import warnings;
 
 from Transformer import Structure;
-from Transformer import Utility;
 
 from Transformer.Framework import Core;
+
+from Transformer.Utilities import StructureTools;
 
 
 # ----------------
@@ -103,12 +104,12 @@ def AntisiteDefects(
 
         # Regroup the structures.
 
-        spacegroupGroups = Utility.GroupStructuresBySpacegroup(
+        spacegroupGroups = StructureTools.GroupStructuresBySpacegroup(
             structuresFlat, degeneraciesFlat, tolerance = tolerance
             );
 
         if printProgressUpdate:
-            Utility.PrintSpacegroupGroupSummary(spacegroupGroups);
+            StructureTools.PrintSpacegroupGroupSummary(spacegroupGroups);
 
         # Update the results.
 

@@ -12,7 +12,7 @@ from Transformer.IO.VASP import ReadPOSCARFile;
 from Transformer.Framework.BatchIO import ExportResultSet, ImportResultSet;
 from Transformer.Framework.Convenience import SolidSolution;
 
-from Transformer.DevelopmentTools import MapResultSetStructures;
+from Transformer.Utilities.DevelopmentTools import MapResultSetStructures;
 
 
 # ----

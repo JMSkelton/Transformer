@@ -8,9 +8,10 @@
 import warnings;
 
 from Transformer import Constants;
-from Transformer import Utility;
 
 from Transformer.Structure import Structure;
+
+from Transformer.Utilities import StructureTools;
 
 
 # ---------
@@ -131,7 +132,7 @@ def ReadPOSCARFile(filePath):
     # If the atom positions are given in Cartesian coordinates, convert them to fractional coordinates.
 
     if coordinateType == 'c':
-        atomPositions = Utility.CartesianToFractionalCoordinates(latticeVectors, atomPositions);
+        atomPositions = StructureTools.CartesianToFractionalCoordinates(latticeVectors, atomPositions);
 
     # Return a Structure object.
 
