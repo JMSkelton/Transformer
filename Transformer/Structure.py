@@ -32,16 +32,9 @@ class Structure:
     # -----------
 
     def __init__(self, latticeVectors, atomPositions, atomTypes, name = None):
-        # Convert the lattice vectors to a NumPy array, check the shape, and store.
+        # Validate and store the lattice vectors.
 
-        latticeVectors = np.array(latticeVectors, dtype = np.float64);
-
-        dim1, dim2 = latticeVectors.shape;
-
-        if dim1 != dim2 != 3:
-            raise Exception("Error: latticeVectors must be convertible to a 3x3 NumPy array.");
-
-        self._latticeVectors = latticeVectors;
+        self.SetLatticeVectors(latticeVectors);
 
         # Obtain a list of atom-type numbers.
 
@@ -242,6 +235,18 @@ class Structure:
 
     def SetName(self, name):
         self._name = name;
+
+    def SetLatticeVectors(self, latticeVectors):
+        # Convert the lattice vectors to a NumPy array, check the shape, and store.
+
+        latticeVectors = np.array(latticeVectors, dtype = np.float64);
+
+        dim1, dim2 = latticeVectors.shape;
+
+        if dim1 != dim2 != 3:
+            raise Exception("Error: latticeVectors must be convertible to a 3x3 NumPy array.");
+
+        self._latticeVectors = latticeVectors;
 
     def SetAtom(self, index, atomType, atomPosition = None):
         # Sanity check.

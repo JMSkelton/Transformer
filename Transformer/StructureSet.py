@@ -220,6 +220,9 @@ class StructureSet:
     def GetDegeneracies(self):
         return self._degeneracySet;
 
+    def GetStructureCount(self):
+        return len(self._structureSet);
+
     def Add(self, structure, degeneracy = 1):
         # Sanity check.
 

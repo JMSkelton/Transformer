@@ -2,9 +2,6 @@ AtomicSubstitutions(): Performing substitution 1 (Zn -> Cu)
 AtomicSubstitutions(): Initial structure set contains 1 structure(s)
 
 
-AtomicSubstitutions(): Substituted set contained 1 structure(s)
-AtomicSubstitutions(): Merging removed 0 structure(s)
-
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
 111 P-42m        |                8 |                1
@@ -12,9 +9,6 @@ AtomicSubstitutions(): Merging removed 0 structure(s)
 AtomicSubstitutions(): Performing substitution 2 (Zn -> Cu)
 AtomicSubstitutions(): Initial structure set contains 1 structure(s)
 
-
-AtomicSubstitutions(): Substituted set contained 4 structure(s)
-AtomicSubstitutions(): Merging removed 0 structure(s)
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
@@ -28,7 +22,7 @@ AtomicSubstitutions(): Initial structure set contains 4 structure(s)
 
 
 AtomicSubstitutions(): Substituted set contained 9 structure(s)
-AtomicSubstitutions(): Merging removed 5 structure(s)
+AtomicSubstitutions(): Filtering/merging removed 5 structure(s)
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
@@ -42,7 +36,7 @@ AtomicSubstitutions(): Initial structure set contains 4 structure(s)
 
 
 AtomicSubstitutions(): Substituted set contained 14 structure(s)
-AtomicSubstitutions(): Merging removed 6 structure(s)
+AtomicSubstitutions(): Filtering/merging removed 6 structure(s)
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
@@ -57,9 +51,6 @@ AtomicSubstitutions(): Performing substitution 5 (Zn -> Ga)
 AtomicSubstitutions(): Initial structure set contains 8 structure(s)
 
 
-AtomicSubstitutions(): Substituted set contained 14 structure(s)
-AtomicSubstitutions(): Merging removed 0 structure(s)
-
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
 111 P-42m        |              192 |                1
@@ -73,7 +64,7 @@ AtomicSubstitutions(): Initial structure set contains 14 structure(s)
 
 
 AtomicSubstitutions(): Substituted set contained 33 structure(s)
-AtomicSubstitutions(): Merging removed 9 structure(s)
+AtomicSubstitutions(): Filtering/merging removed 9 structure(s)
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
@@ -92,7 +83,7 @@ AtomicSubstitutions(): Initial structure set contains 24 structure(s)
 
 
 AtomicSubstitutions(): Substituted set contained 33 structure(s)
-AtomicSubstitutions(): Merging removed 19 structure(s)
+AtomicSubstitutions(): Filtering/merging removed 19 structure(s)
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
@@ -107,7 +98,7 @@ AtomicSubstitutions(): Initial structure set contains 14 structure(s)
 
 
 AtomicSubstitutions(): Substituted set contained 14 structure(s)
-AtomicSubstitutions(): Merging removed 6 structure(s)
+AtomicSubstitutions(): Filtering/merging removed 6 structure(s)
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
@@ -122,9 +113,6 @@ AtomicSubstitutions(): Performing substitution 9 (Ga -> Zn)
 AtomicSubstitutions(): Initial structure set contains 8 structure(s)
 
 
-AtomicSubstitutions(): Substituted set contained 14 structure(s)
-AtomicSubstitutions(): Merging removed 0 structure(s)
-
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
 111 P-42m        |            4,608 |                1
@@ -138,7 +126,7 @@ AtomicSubstitutions(): Initial structure set contains 14 structure(s)
 
 
 AtomicSubstitutions(): Substituted set contained 33 structure(s)
-AtomicSubstitutions(): Merging removed 9 structure(s)
+AtomicSubstitutions(): Filtering/merging removed 9 structure(s)
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
@@ -156,9 +144,6 @@ AtomicSubstitutions(): Performing substitution 11 (Ga -> Sn)
 AtomicSubstitutions(): Initial structure set contains 24 structure(s)
 
 
-AtomicSubstitutions(): Substituted set contained 33 structure(s)
-AtomicSubstitutions(): Merging removed 0 structure(s)
-
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
 111 P-42m        |           27,648 |                3
@@ -172,7 +157,7 @@ AtomicSubstitutions(): Initial structure set contains 33 structure(s)
 
 
 AtomicSubstitutions(): Substituted set contained 33 structure(s)
-AtomicSubstitutions(): Merging removed 9 structure(s)
+AtomicSubstitutions(): Filtering/merging removed 9 structure(s)
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------

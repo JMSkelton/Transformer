@@ -2,9 +2,6 @@ AtomicSubstitutions(): Performing substitution 1 (S -> Se)
 AtomicSubstitutions(): Initial structure set contains 1 structure(s)
 
 
-AtomicSubstitutions(): Substituted set contained 1 structure(s)
-AtomicSubstitutions(): Merging removed 0 structure(s)
-
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
 6   Pm           |               16 |                1
@@ -14,7 +11,7 @@ AtomicSubstitutions(): Initial structure set contains 1 structure(s)
 
 
 AtomicSubstitutions(): Substituted set contained 11 structure(s)
-AtomicSubstitutions(): Merging removed 1 structure(s)
+AtomicSubstitutions(): Filtering/merging removed 1 structure(s)
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
@@ -30,7 +27,7 @@ AtomicSubstitutions(): Initial structure set contains 10 structure(s)
 
 
 AtomicSubstitutions(): Substituted set contained 65 structure(s)
-AtomicSubstitutions(): Merging removed 42 structure(s)
+AtomicSubstitutions(): Filtering/merging removed 42 structure(s)
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
@@ -42,7 +39,7 @@ AtomicSubstitutions(): Initial structure set contains 23 structure(s)
 
 
 AtomicSubstitutions(): Substituted set contained 259 structure(s)
-AtomicSubstitutions(): Merging removed 174 structure(s)
+AtomicSubstitutions(): Filtering/merging removed 174 structure(s)
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
@@ -61,7 +58,7 @@ AtomicSubstitutions(): Initial structure set contains 85 structure(s)
 
 
 AtomicSubstitutions(): Substituted set contained 745 structure(s)
-AtomicSubstitutions(): Merging removed 588 structure(s)
+AtomicSubstitutions(): Filtering/merging removed 588 structure(s)
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
@@ -73,7 +70,7 @@ AtomicSubstitutions(): Initial structure set contains 157 structure(s)
 
 
 AtomicSubstitutions(): Substituted set contained 1603 structure(s)
-AtomicSubstitutions(): Merging removed 1293 structure(s)
+AtomicSubstitutions(): Filtering/merging removed 1293 structure(s)
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
@@ -91,7 +88,7 @@ AtomicSubstitutions(): Initial structure set contains 310 structure(s)
 
 
 AtomicSubstitutions(): Substituted set contained 2641 structure(s)
-AtomicSubstitutions(): Merging removed 2246 structure(s)
+AtomicSubstitutions(): Filtering/merging removed 2246 structure(s)
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
@@ -103,7 +100,7 @@ AtomicSubstitutions(): Initial structure set contains 395 structure(s)
 
 
 AtomicSubstitutions(): Substituted set contained 3379 structure(s)
-AtomicSubstitutions(): Merging removed 2897 structure(s)
+AtomicSubstitutions(): Filtering/merging removed 2897 structure(s)
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
@@ -126,7 +123,7 @@ AtomicSubstitutions(): Initial structure set contains 482 structure(s)
 
 
 AtomicSubstitutions(): Substituted set contained 3379 structure(s)
-AtomicSubstitutions(): Merging removed 2984 structure(s)
+AtomicSubstitutions(): Filtering/merging removed 2984 structure(s)
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
@@ -138,7 +135,7 @@ AtomicSubstitutions(): Initial structure set contains 395 structure(s)
 
 
 AtomicSubstitutions(): Substituted set contained 2641 structure(s)
-AtomicSubstitutions(): Merging removed 2331 structure(s)
+AtomicSubstitutions(): Filtering/merging removed 2331 structure(s)
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
@@ -156,7 +153,7 @@ AtomicSubstitutions(): Initial structure set contains 310 structure(s)
 
 
 AtomicSubstitutions(): Substituted set contained 1603 structure(s)
-AtomicSubstitutions(): Merging removed 1446 structure(s)
+AtomicSubstitutions(): Filtering/merging removed 1446 structure(s)
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
@@ -168,7 +165,7 @@ AtomicSubstitutions(): Initial structure set contains 157 structure(s)
 
 
 AtomicSubstitutions(): Substituted set contained 745 structure(s)
-AtomicSubstitutions(): Merging removed 660 structure(s)
+AtomicSubstitutions(): Filtering/merging removed 660 structure(s)
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
@@ -187,7 +184,7 @@ AtomicSubstitutions(): Initial structure set contains 85 structure(s)
 
 
 AtomicSubstitutions(): Substituted set contained 259 structure(s)
-AtomicSubstitutions(): Merging removed 236 structure(s)
+AtomicSubstitutions(): Filtering/merging removed 236 structure(s)
 
    Spacegroup    |   # Structures    |     # Unique     
 --------------------------------------------------------
@@ -199,7 +196,7 @@ AtomicSubstitutions(): Initial structure set contains 23 structure(s)
 
 
 AtomicSubstitutions(): Substituted set contained 65 structure(s)
-AtomicSubstitutions(): Merging removed 55 structure(s)
+AtomicSubstitutions(): Filtering/merging removed 55 structure(s)
 
    Spacegroup    |   # Structures    |     # Unique     
 --------------------------------------------------------
@@ -215,7 +212,7 @@ AtomicSubstitutions(): Initial structure set contains 10 structure(s)
 
 
 AtomicSubstitutions(): Substituted set contained 11 structure(s)
-AtomicSubstitutions(): Merging removed 10 structure(s)
+AtomicSubstitutions(): Filtering/merging removed 10 structure(s)
 
    Spacegroup    |    # Structures    |      # Unique     
 ----------------------------------------------------------
@@ -224,9 +221,6 @@ AtomicSubstitutions(): Merging removed 10 structure(s)
 AtomicSubstitutions(): Performing substitution 16 (S -> Se)
 AtomicSubstitutions(): Initial structure set contains 1 structure(s)
 
-
-AtomicSubstitutions(): Substituted set contained 1 structure(s)
-AtomicSubstitutions(): Merging removed 0 structure(s)
 
    Spacegroup    |    # Structures    |      # Unique     
 ----------------------------------------------------------
@@ -258,9 +252,6 @@ AtomicSubstitutions(): Performing substitution 1 (S -> Se)
 AtomicSubstitutions(): Initial structure set contains 1 structure(s)
 
 
-AtomicSubstitutions(): Substituted set contained 1 structure(s)
-AtomicSubstitutions(): Merging removed 0 structure(s)
-
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
 6   Pm           |               16 |                1
@@ -270,7 +261,7 @@ AtomicSubstitutions(): Initial structure set contains 1 structure(s)
 
 
 AtomicSubstitutions(): Substituted set contained 11 structure(s)
-AtomicSubstitutions(): Merging removed 1 structure(s)
+AtomicSubstitutions(): Filtering/merging removed 1 structure(s)
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
@@ -286,7 +277,7 @@ AtomicSubstitutions(): Initial structure set contains 10 structure(s)
 
 
 AtomicSubstitutions(): Substituted set contained 65 structure(s)
-AtomicSubstitutions(): Merging removed 42 structure(s)
+AtomicSubstitutions(): Filtering/merging removed 42 structure(s)
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
@@ -298,7 +289,7 @@ AtomicSubstitutions(): Initial structure set contains 23 structure(s)
 
 
 AtomicSubstitutions(): Substituted set contained 259 structure(s)
-AtomicSubstitutions(): Merging removed 174 structure(s)
+AtomicSubstitutions(): Filtering/merging removed 174 structure(s)
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
@@ -317,7 +308,7 @@ AtomicSubstitutions(): Initial structure set contains 85 structure(s)
 
 
 AtomicSubstitutions(): Substituted set contained 745 structure(s)
-AtomicSubstitutions(): Merging removed 588 structure(s)
+AtomicSubstitutions(): Filtering/merging removed 588 structure(s)
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
@@ -329,7 +320,7 @@ AtomicSubstitutions(): Initial structure set contains 157 structure(s)
 
 
 AtomicSubstitutions(): Substituted set contained 1603 structure(s)
-AtomicSubstitutions(): Merging removed 1293 structure(s)
+AtomicSubstitutions(): Filtering/merging removed 1293 structure(s)
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
@@ -347,7 +338,7 @@ AtomicSubstitutions(): Initial structure set contains 310 structure(s)
 
 
 AtomicSubstitutions(): Substituted set contained 2641 structure(s)
-AtomicSubstitutions(): Merging removed 2246 structure(s)
+AtomicSubstitutions(): Filtering/merging removed 2246 structure(s)
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
@@ -359,7 +350,7 @@ AtomicSubstitutions(): Initial structure set contains 395 structure(s)
 
 
 AtomicSubstitutions(): Substituted set contained 3379 structure(s)
-AtomicSubstitutions(): Merging removed 2897 structure(s)
+AtomicSubstitutions(): Filtering/merging removed 2897 structure(s)
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------

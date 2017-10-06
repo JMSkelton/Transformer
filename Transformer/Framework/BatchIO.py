@@ -5,6 +5,7 @@
 # Imports
 # -------
 
+import fractions;
 import os;
 import re;
 import tarfile;
@@ -356,26 +357,12 @@ def ImportResultSet(prefix = None, directory = "./"):
 # Utility Functions
 # -----------------
 
+# This code is based on the discussion in https://www.rookieslab.com/posts/cpp-python-code-to-find-gcd-of-a-list-of-numbers.
+
 def _GetCommonDivisor(integers):
-    commonDivisor = 1;
+    divisor = integers[0];
 
-    hasDivisor = True;
+    for i in integers[1:]:
+        divisor = fractions.gcd(divisor, i);
 
-    while hasDivisor:
-        # Iteratively divide through by the smallest value until the common divisor found.
-
-        divisor = min(integers);
-
-        if divisor == 1:
-            break;
-
-        for value in integers:
-            if value % divisor != 0:
-                hasDivisor = False;
-                break;
-
-        if hasDivisor:
-            commonDivisor = commonDivisor * divisor;
-            integers = [integer // divisor for integer in integers];
-
-    return commonDivisor;
+    return divisor;
