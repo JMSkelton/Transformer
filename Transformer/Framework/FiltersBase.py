@@ -128,9 +128,9 @@ class CoverageFilterBase(FilterBase):
     # -------
 
     def RequiresFilteredStructures(self):
-        # If the coverage level is set to 'low', the filtered structures are not required.
+        # If the coverage level is set to 'low', or the final substitution is being processed, the filtered structures are not required.
 
-        return self._coverage != 'low';
+        return self._coverage != 'low' and self._substitutionIndex < len(self._substitutions) - 1;
 
     def OnStartSubstitution(self, index):
         # If the coverage level is not set to 'low', update the last filtered structure set and call the base class method.
