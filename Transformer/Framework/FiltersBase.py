@@ -82,7 +82,7 @@ class FilterBase(object):
 
         return True;
 
-    def SetFilteredStructures(self, structures, degeneracies):
+    def SetFilteredStructureSet(filteredStructureSet, degeneracies):
         # Do nothing.
 
         pass;
@@ -118,10 +118,10 @@ class CoverageFilterBase(FilterBase):
 
         self._coverage = coverage;
 
-        # Initialise empty fields for storing the current and last sets of filtered structures and degeneracies passed to SetFilteredStructures().
+        # Initialise empty fields for storing the current and last sets of filtered structures passed to SetFilteredStructures().
 
-        self._lastFilteredStructures, self._lastFilteredDegeneracies = None, None;
-        self._currentFilteredStructures, self._currentFilteredDegeneracies = None, None;
+        self._lastFilteredStructureSet = None;
+        self._currentFilteredStructureSet = None;
 
     # -------
     # Methods
@@ -133,30 +133,29 @@ class CoverageFilterBase(FilterBase):
         return self._coverage != 'low';
 
     def OnStartSubstitution(self, index):
-        # If the coverage level is not set to 'low', update the last set of filtered structures and degeneracies and call the base class method.
+        # If the coverage level is not set to 'low', update the last filtered structure set and call the base class method.
 
         if self._coverage != 'low':
-            self._lastFilteredStructures = self._currentFilteredStructures;
-            self._lastFilteredDegeneracies = self._currentFilteredDegeneracies;
-
-            self._currentFilteredStructures, self._currentFilteredDegeneracies = None, None;
+            self._lastFilteredStructureSet = self._currentFilteredStructureSet;
+            self._currentFilteredStructureSet = None;
 
             self._substitutionIndex = index;
 
-    def SetFilteredStructures(self, structures, degeneracies):
+    def SetFilteredStructureSet(self, filteredStructureSet):
         # If the coverage level is not set to 'low', store the filtered structures and degeneracies.
 
         if self._coverage != 'low':
-            self._currentFilteredStructures = structures;
-            self._currentFilteredDegeneracies = degeneracies;
+            self._currentFilteredStructureSet = filteredStructureSet;
 
     def FinaliseMergedStructureSet(self, structureSet):
         # For all bar the 'low' coverage level, we need to apply the current substitution to the last set of filtered structures (if available).
 
         if self._coverage != 'low':
-            structures, degeneracies = self._lastFilteredStructures, self._lastFilteredDegeneracies;
+            lastFilteredStructureSet = self._lastFilteredStructureSet;
 
-            if structures != None and len(structures) > 0:
+            if lastFilteredStructureSet != None and lastFilteredStructureSet.GetStructureCount() > 0:
+                structures, degeneracies = self._lastFilteredStructureSet.GetStructureSetFlat();
+
                 printProgressUpdate = self._printProgressUpdate;
 
                 if printProgressUpdate:
@@ -179,13 +178,16 @@ class CoverageFilterBase(FilterBase):
 
                 tolerance = self._tolerance;
 
-                # Count the number of structures added to the merged structure set.
+                # Load the current filtered structure set if required.
 
-                addCount = 0;
+                currentFilteredStructureSet = None;
 
-                # Lists to store child structures removed by the TestSubstitutedStructure().
+                if self._coverage == 'full':
+                    currentFilteredStructureSet = self._currentFilteredStructureSet;
 
-                filteredStructures, filteredDegeneracies = [], [];
+                # Count the number of structures added to the merged and filtered structure sets.
+
+                addCount, addCountFiltered = 0, 0;
 
                 if progressBar:
                     print("");
@@ -216,35 +218,23 @@ class CoverageFilterBase(FilterBase):
                         if self.TestSubstitutedStructure(newStructure, newDegeneracy):
                             if structureSet.Add(newStructure, newDegeneracy):
                                 addCount += 1;
-                        else:
-                            filteredStructures.append(newStructures);
-                            filteredDegeneracies.append(newDegeneracy);
+
+                        elif currentFilteredStructureSet != None:
+                            if currentFilteredStructureSet.Add(newStructure, newDegeneracy):
+                                addCountFiltered += 1;
 
                 if progressBar:
                     print("");
 
-                # For formatting the terminal output.
+                if printProgressUpdate:
+                    if addCount > 0:
+                        print("{0}: Added {1} structure(s) to merged structure set.".format(self.__class__.__name__, addCount));
 
-                printedMessage = False;
+                    if addCountFiltered > 0:
+                        print("{0}: Added {1} structure(s) to the filtered list.".format(self.__class__.__name__, addCount));
 
-                if printProgressUpdate and addCount > 0:
-                    print("{0}: Added {1} structure(s) to merged structure set.".format(self.__class__.__name__, addCount));
-
-                    printedMessage = True;
-
-                # If the coverage level is set to 'full', add any filtered structures to the current set passed to SetFilteredStructures().
-
-                if self._coverage == 'full' and len(filteredStructures) > 0:
-                    self._currentFilteredStructures = self._currentFilteredStructures + filteredStructures;
-                    self._currentFilteredDegeneracies = self._currentFilteredDegeneracies + filteredDegeneracies;
-
-                    if printProgressUpdate:
-                        print("{0}: Added {1} structure(s) to the filtered list.".format(self.__class__.__name__, len(filteredStructures)));
-
-                        printedMessage = True;
-
-                if printedMessage:
-                    print("");
+                    if addCount > 0 or addCountFiltered > 0:
+                        print("");
 
     # -------------
     # Static Fields

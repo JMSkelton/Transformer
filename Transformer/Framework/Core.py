@@ -139,25 +139,25 @@ def AtomicSubstitutions(
 
         # Generate substituted child structures.
 
-        newStructures, newDegeneracies, numGen = None, None, None;
+        structureSet, numGen = None, None;
 
         # If useMP is set, use the parallel generation routine; if not, use the serial one.
 
         if useMP:
-            newStructures, newDegeneracies, numGen = _GenerateSubstitutedStructutesMP(
+            structureSet, numGen = _GenerateSubstitutedStructutesMP(
                 currentStructures, currentDegeneracies, (atomTypeNumber1, atomTypeNumber2),
                 tolerance, substitutionAtoms, parentSymmetryOperations, filterObj,
                 progressBar, mpNumProcesses
                 );
         else:
-            newStructures, newDegeneracies, numGen = _GenerateSubstitutedStructutes(
+            structureSet, numGen = _GenerateSubstitutedStructutes(
                 currentStructures, currentDegeneracies, (atomTypeNumber1, atomTypeNumber2),
                 tolerance, substitutionAtoms, parentSymmetryOperations, filterObj,
                 progressBar
                 );
 
         if printProgressUpdate:
-            numStructures = len(newStructures);
+            numStructures = structureSet.GetStructureCount();
 
             if numStructures < numGen:
                 print("AtomicSubstitutions(): Substituted set contained {0} structure(s)".format(numGen));
@@ -165,25 +165,19 @@ def AtomicSubstitutions(
 
                 print("");
 
-        # Check whether a progress update has been requested or we need to store this set of intermediate results.
-        # If neither, we may be able to avoid sorting the structures by spacegroup, and hence some spglib calls.
+        # If printProgressUpdate is set, print a summary of the spacegroupGroups.
 
-        if printProgressUpdate or i + 1 in storeIntermediate:
-            # Group the new structures by spacegroup.
-
-            spacegroupGroups = StructureTools.GroupStructuresBySpacegroup(
-                newStructures, newDegeneracies, tolerance = tolerance
+        if printProgressUpdate:
+            StructureTools.PrintSpacegroupGroupSummary(
+                structureSet.GetStructureSet()
                 );
 
-            # If printProgressUpdate is set, print a summary of the spacegroupGroups.
+        # Store the result if required.
 
-            if printProgressUpdate:
-                StructureTools.PrintSpacegroupGroupSummary(spacegroupGroups);
-
-            # Store the result if required.
-
-            if i + 1 in storeIntermediate:
-                intermediateStructures.append(spacegroupGroups);
+        if i + 1 in storeIntermediate:
+            intermediateStructures.append(
+                structureSet.GetStructureSet()
+                );
 
         # Update the permutation count; all structures should have the same composition -> take the atom-type numbers from the first one.
 
@@ -201,7 +195,7 @@ def AtomicSubstitutions(
 
         # Update the current structure set/degeneracies.
 
-        currentStructures, currentDegeneracies = newStructures, newDegeneracies;
+        currentStructures, currentDegeneracies = structureSet.GetStructureSetFlat();
 
     # If printProgressUpdate is set, print a final summary.
 
@@ -277,6 +271,8 @@ def _GenerateSubstitutedStructutes(
         # Initialise structure set(s), if not already done.
 
         if structureSet == None:
+            atomCount = newStructures[0].GetAtomCount();
+
             # As a performance optimisation, we only compare the positions of atoms involved in the substitution.
 
             atomIndexRanges = newStructures[0].GetAtomIndexRanges();
@@ -286,17 +282,15 @@ def _GenerateSubstitutedStructutes(
                     if atomTypeNumber in atomIndexRanges
                 ];
 
-            structureSet = StructureSet.StructureSet(
-                compareLatticeVectors = False, compareAtomTypeNumbers = False, compareAtomPositions = True,
-                tolerance = tolerance, parentSymmetryOperations = parentSymmetryOperations, compareAtomIndexRanges = compareAtomIndexRanges
+            structureSet = StructureSet.StructureSetOpt(
+                atomCount, tolerance = tolerance, parentSymmetryOperations = parentSymmetryOperations, compareAtomIndexRanges = compareAtomIndexRanges
                 );
 
             # If a filter has been supplied and requires the filtered structures, set up a second structure set to store them.
 
             if filterObj != None and filterObj.RequiresFilteredStructures():
-                structureSetFiltered = StructureSet.StructureSet(
-                    compareLatticeVectors = False, compareAtomTypeNumbers = False, compareAtomPositions = True,
-                    tolerance = tolerance, parentSymmetryOperations = parentSymmetryOperations, compareAtomIndexRanges = compareAtomIndexRanges
+                structureSetFiltered = StructureSet.StructureSetOpt(
+                    atomCount, tolerance = tolerance, parentSymmetryOperations = parentSymmetryOperations, compareAtomIndexRanges = compareAtomIndexRanges
                     );
 
         # If a filter has been supplied, partition the structures between the two structure sets.
@@ -345,9 +339,7 @@ def _GenerateSubstitutedStructutes(
         # If required, pass SetFilteredStructures() the list of structures removed by TestSubstitutedStructure() and the associated degeneracies.
 
         if filterObj.RequiresFilteredStructures():
-            filterObj.SetFilteredStructures(
-                structureSetFiltered.GetStructures(), structureSetFiltered.GetDegeneracies()
-                );
+            filterObj.SetFilteredStructureSet(structureSetFiltered);
 
         # Pass the structure set to FinaliseMergedStructureSet().
 
@@ -355,7 +347,7 @@ def _GenerateSubstitutedStructutes(
 
     # Return the merged substituted structures, associated degeneracies and the number of generated substituted structures.
 
-    return (structureSet.GetStructures(), structureSet.GetDegeneracies(), numGen);
+    return (structureSet, numGen);
 
 # Polling delay for synchronisation between main and worker processes.
 
@@ -480,15 +472,13 @@ def _GenerateSubstitutedStructutesMP(
 
     if filterObj != None:
         if filterObj.RequiresFilteredStructures():
-            filterObj.SetFilteredStructures(
-                structureSetFiltered.GetStructures(), structureSetFiltered.GetDegeneracies()
-                );
+            filterObj.SetFilteredStructureSet(structureSetFiltered);
 
         filterObj.FinaliseMergedStructureSet(structureSet);
 
     # Return the structures and degeneracies from the merged set, along with the number of structures generated.
 
-    return (structureSet.GetStructures(), structureSet.GetDegeneracies(), numGen);
+    return (structureSet, numGen);
 
 def _GenerateSubstitutedStructutesMP_GenerateProcessMain(args):
     # Unpack arguments.
@@ -526,6 +516,8 @@ def _GenerateSubstitutedStructutesMP_GenerateProcessMain(args):
             # Initialise the structure sets if required.
 
             if structureSet == None:
+                atomCount = newStructures[0].GetAtomCount();
+
                 atomIndexRanges = newStructures[0].GetAtomIndexRanges();
 
                 compareAtomIndexRanges = [
@@ -533,15 +525,13 @@ def _GenerateSubstitutedStructutesMP_GenerateProcessMain(args):
                         if atomTypeNumber in atomIndexRanges
                     ];
 
-                structureSet = StructureSet.StructureSet(
-                    compareLatticeVectors = False, compareAtomTypeNumbers = False, compareAtomPositions = True,
-                    tolerance = tolerance, parentSymmetryOperations = parentSymmetryOperations, compareAtomIndexRanges = compareAtomIndexRanges
+                structureSet = StructureSet.StructureSetOpt(
+                    atomCount, tolerance = tolerance, parentSymmetryOperations = parentSymmetryOperations, compareAtomIndexRanges = compareAtomIndexRanges
                     );
 
                 if filterObj != None and filterObj.RequiresFilteredStructures():
-                    structureSetFiltered = StructureSet.StructureSet(
-                        compareLatticeVectors = False, compareAtomTypeNumbers = False, compareAtomPositions = True,
-                        tolerance = tolerance, parentSymmetryOperations = parentSymmetryOperations, compareAtomIndexRanges = compareAtomIndexRanges
+                    structureSetFiltered = StructureSet.StructureSetOpt(
+                        atomCount, tolerance = tolerance, parentSymmetryOperations = parentSymmetryOperations, compareAtomIndexRanges = compareAtomIndexRanges
                         );
 
             # Merge the new structures into the structure set(s), depending on whether or not a filter has been supplied and its requirements.
