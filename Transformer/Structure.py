@@ -101,6 +101,7 @@ class Structure:
         self._pAtomicSymbolsCounts = None;
         self._pAtomIndexRanges = None;
         self._pChemicalFormula = None;
+        self._pNeighbourTable = None;
 
     def _PerformSymmetryAnalysis(self, tolerance = None):
         # If no symmetry tolerance is provided, use the default value.
@@ -318,7 +319,7 @@ class Structure:
         else:
             atomData = self._atomData;
 
-            atomDataNew = atomData[atomTypeNumbers != atomType1];
+            atomDataNew = atomData[atomTypeNumbers != atomTypeNumber1];
 
             numAtomsNew = len(atomDataNew);
 
@@ -457,7 +458,7 @@ class Structure:
         return min(0, np.min(self._atomTypeNumbersView)) - 1;
 
     def GetAtomicSymbolsCounts(self, atomicSymbolLookupTable = None):
-        # If atomicSymbolLookupTable is not set and the internal _pAtomSymbolsCounts has been initialised, we can simply return a copy of that.
+        # If atomicSymbolLookupTable is not set and the internal _pAtomSymbolsCounts field has been initialised, we can simply return a copy of that.
 
         if atomicSymbolLookupTable == None and self._pAtomicSymbolsCounts != None:
             atomicSymbols, atomCounts = self._pAtomicSymbolsCounts;
@@ -494,7 +495,7 @@ class Structure:
         return (atomicSymbols, atomCounts);
 
     def GetAtomIndexRanges(self):
-        # If the internal _pAtomIndexRanges has not been initialised, initialise it.
+        # Return a dictionary of tuples mapping atom-type numbers to atom-index ranges.
 
         if self._pAtomIndexRanges == None:
             atomTypeNumbers = self._atomTypeNumbersView;
@@ -537,6 +538,38 @@ class Structure:
             self._pChemicalFormula = chemicalFormula;
 
         return self._pChemicalFormula;
+
+    def GetNeighbourTable(self):
+        # Compute and return a table of interatomic distances (a neighbour table).
+
+        if self._pNeighbourTable == None:
+            atomPositions = self._atomPositionsView;
+
+            numAtoms = len(atomPositions);
+
+            # Build an NxN array with the vectors (in fractional coordinates) between all pairs of atoms.
+
+            vectors = np.zeros(
+                (numAtoms, numAtoms, 3), dtype = np.float64
+                );
+
+            for i in range(0, numAtoms):
+                vectors[i, :] = atomPositions[:] - atomPositions[i];
+
+            # Apply periodic boundary conditions.
+
+            vectors[vectors < -0.5] += 1.0;
+            vectors[vectors >= 0.5] -= 1.0;
+
+            # Convert fractional to Cartesian coordinates (NumPy one-liner...!).
+
+            vectors = np.einsum('ijk,kl', vectors, self._latticeVectors);
+
+            # Convert vectors to distances and store.
+
+            self._pNeighbourTable = np.sqrt(np.sum(vectors ** 2, axis = 2));
+
+        return self._pNeighbourTable;
 
     # --------------------
     # Manipulation Methods
