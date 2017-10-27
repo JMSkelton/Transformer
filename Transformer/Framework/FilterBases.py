@@ -1,4 +1,4 @@
-# Transformer/Framework/FiltersBase.py by J. M. Skelton
+# Transformer/Framework/FilterBases.py
 
 
 # -------
@@ -9,7 +9,7 @@ import warnings;
 
 from Transformer import Structure;
 
-# Try to import the tqdm module to display progress bars in the _GenerateChildStructutes*() routines.
+# Try to import the tqdm module to display progress bars in some of the slower routines.
 
 _TQDM = False;
 

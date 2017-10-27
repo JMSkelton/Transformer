@@ -1,4 +1,4 @@
-# Transformer/Utilities/DevelopmentTools.py by J. M. Skelton
+# Transformer/Utilities/DevelopmentTools.py
 
 
 # -------

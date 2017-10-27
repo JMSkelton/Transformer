@@ -1,1 +1,1 @@
-# Transformer/IO/__init__.py by J. M. Skelton
+# Transformer/IO/__init__.py

@@ -1,4 +1,4 @@
-# Transformer/Framework/AtomicSubstitutions.py by J. M. Skelton
+# Transformer/Framework/AtomicSubstitutions.py
 
 
 # -------
@@ -389,7 +389,7 @@ def _GenerateSubstitutedStructutesMP(
     processArgs = (substitution, (tolerance, substitutionAtoms, parentSymmetryOperations, filterObj), (inputQueue, progressCounter, terminateFlag, outputQueue));
 
     workerProcesses = [
-        multiprocessing.Process(target = _GenerateSubstitutedStructutesMP_GenerateProcessMain, args = (processArgs, ))
+        multiprocessing.Process(target = _GenerateSubstitutedStructutesMP_GenerateProcessMain, args = processArgs)
             for i in range(0, numWorkerProcesses)
         ];
 
@@ -480,7 +480,7 @@ def _GenerateSubstitutedStructutesMP(
 
     return (structureSet, numGen);
 
-def _GenerateSubstitutedStructutesMP_GenerateProcessMain(args):
+def _GenerateSubstitutedStructutesMP_GenerateProcessMain(*args):
     # Unpack arguments.
 
     substitution, (tolerance, substitutionAtoms, parentSymmetryOperations, filterObj), (inputQueue, progressCounter, terminateFlag, outputQueue) = args;

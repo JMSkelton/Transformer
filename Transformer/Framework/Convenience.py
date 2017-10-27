@@ -1,4 +1,4 @@
-# Transformer/Framework/Convenience.py by J. M. Skelton
+# Transformer/Framework/Convenience.py
 
 
 # -------

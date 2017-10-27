@@ -1,4 +1,4 @@
-# Transformer/_StructureSet.pyx by J. M. Skelton
+# Transformer/_StructureSet.pyx
 
 
 # -------

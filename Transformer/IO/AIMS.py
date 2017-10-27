@@ -1,4 +1,4 @@
-# Transformer/IO/AIMS.py by J. M. Skelton
+# Transformer/IO/AIMS.py
 
 
 # -------
@@ -80,7 +80,7 @@ def WriteAIMSGeometryFile(structure, filePath, atomicSymbolLookupTable = None):
 
         # Write the atom positions and types.
 
-        atomicSymbols, atomCounts = structure.GetAtomicSymbolsCounts();
+        atomicSymbols, atomCounts = structure.GetAtomicSymbolsCounts(atomicSymbolLookupTable = atomicSymbolLookupTable);
 
         atomPositions = structure.GetAtomPositionsCartesian();
 

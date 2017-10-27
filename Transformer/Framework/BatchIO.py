@@ -1,4 +1,4 @@
-# Transformer/Framework/BatchIO.py by J. M. Skelton
+# Transformer/Framework/BatchIO.py
 
 
 # -------
@@ -30,7 +30,7 @@ ExportFileFormats = {
 
 _ExportResultSet_TemporaryFileName = r"_ExportTemp.tmp";
 
-def ExportResultSet(resultSet, prefix = None, atomicSymbolLookupTable = None, workingDirectory = "./", fileFormat = 'vasp', spacegroupSubfolders = False):
+def ExportResultSet(resultSet, prefix = None, atomicSymbolLookupTable = None, workingDirectory = "./", fileFormat = 'vasp', spacegroupSubfolders = False, normaliseDegeneracies = False):
     fileFormat = fileFormat.lower();
 
     # Check fileFormat.
@@ -79,15 +79,18 @@ def ExportResultSet(resultSet, prefix = None, atomicSymbolLookupTable = None, wo
 
         archiveName = archiveName + chemicalFormula;
 
-        # Calculate the common divisor to normalise the degeneracies.
+        # If normaliseDegeneracies is set, calculate a common divisor to normalise the degeneracies.
 
-        mergedDegeneracies = [];
+        commonDivisor = None;
 
-        for key in keys:
-            _, degeneracies = spacegroupGroups[key];
-            mergedDegeneracies = mergedDegeneracies + degeneracies;
+        if normaliseDegeneracies:
+            mergedDegeneracies = [];
 
-        commonDivisor = _GetCommonDivisor(mergedDegeneracies);
+            for key in keys:
+                _, degeneracies = spacegroupGroups[key];
+                mergedDegeneracies = mergedDegeneracies + degeneracies;
+
+            commonDivisor = _GetCommonDivisor(mergedDegeneracies);
 
         # Output and archive the structures.
 
@@ -111,18 +114,27 @@ def ExportResultSet(resultSet, prefix = None, atomicSymbolLookupTable = None, wo
                 for i, (structure, degeneracy) in enumerate(zip(structures, degeneracies)):
                     # Give each structure a title line that includes the chemical formula, spacegroup and normalised degeneracy.
 
-                    structure.SetName(
-                        "{0} : SG = {1} ({2}), rel. weight = {3}".format(chemicalFormula, spacegroupNumber, spacegroupSymbol, degeneracy // commonDivisor)
-                        );
+                    titleLine = None;
+
+                    if commonDivisor != None:
+                        titleLine = "{0} : SG = {1} ({2}), rel. weight = {3}".format(chemicalFormula, spacegroupNumber, spacegroupSymbol, degeneracy // commonDivisor);
+                    else:
+                        titleLine = "{0} : SG = {1} ({2}), degeneracy = {3}".format(chemicalFormula, spacegroupNumber, spacegroupSymbol, degeneracy);
+
+                    structure.SetName(titleLine);
 
                     # Generate a file name from the chemical formula, spacegroup number and structure number.
 
                     fileName = "{0}_SG-{1}_{2:0>4}{3}".format(chemicalFormula, spacegroupNumber, i + 1, ExportFileFormats[fileFormat]);
 
                     if fileFormat == 'vasp':
-                        VASP.WritePOSCARFile(structure, _ExportResultSet_TemporaryFileName);
+                        VASP.WritePOSCARFile(
+                            structure, _ExportResultSet_TemporaryFileName, atomicSymbolLookupTable = atomicSymbolLookupTable
+                            );
                     elif fileFormat == 'aims':
-                        AIMS.WriteAIMSGeometryFile(structure, _ExportResultSet_TemporaryFileName);
+                        AIMS.WriteAIMSGeometryFile(
+                            structure, _ExportResultSet_TemporaryFileName, atomicSymbolLookupTable = atomicSymbolLookupTable
+                            );
 
                     archiveFile.add(
                         _ExportResultSet_TemporaryFileName, arcname = "{0}/{1}/{2}".format(archiveName, subfolderName, fileName) if subfolderName != None else "{0}/{1}".format(archiveName, fileName)

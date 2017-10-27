@@ -1,4 +1,4 @@
-# Transformer/IO/VASP.py by J. M. Skelton
+# Transformer/IO/VASP.py
 
 
 # -------
@@ -120,14 +120,21 @@ def ReadPOSCARFile(filePath):
         # If atom types were read from the POSCAR file, convert these to atomic numbers.
 
         for atomType, atomCount in zip(atomTypes, atomCounts):
-            atomTypeNumbers = atomTypeNumbers + [Constants.SymbolToAtomicNumber(atomType)] * atomCount;
-    else:
-        # If not, issue a warning and assign sequential type numbers from 1.
+            # Try and look up an atom-type number from the periodic table in the Constants module; failing that, set it to an unused negative number.
 
-        warnings.warn("Structure objects returned by reading VASP 4-format POSCAR files numbers cannot be initialised with atomic numbers and instead use sequential atom-type numbers from 1.", UserWarning);
+            atomTypeNumber = Constants.SymbolToAtomicNumber(atomType);
+
+            if atomTypeNumber == None:
+                atomTypeNumber = min(min(atomTypeNumbers), 0) - 1;
+
+            atomTypeNumbers = atomTypeNumbers + [atomTypeNumber] * atomCount;
+    else:
+        # If not, issue a warning and assign negative type numbers from -1.
+
+        warnings.warn("Structure objects returned by reading VASP 4-format POSCAR files numbers cannot be initialised with negative atomic numbers from -1.", UserWarning);
 
         for i, atomCount in enumerate(atomCounts):
-            atomTypeNumbers = atomTypeNumbers + [i + 1] * atomCount;
+            atomTypeNumbers = atomTypeNumbers + [-1 * (i + 1)] * atomCount;
 
     # If the atom positions are given in Cartesian coordinates, convert them to fractional coordinates.
 

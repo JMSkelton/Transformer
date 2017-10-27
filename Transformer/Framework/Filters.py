@@ -1,11 +1,11 @@
-# Transformer/Framework/Filters.py by J. M. Skelton
+# Transformer/Framework/Filters.py
 
 
 # -------
 # Imports
 # -------
 
-from Transformer.Framework.FiltersBase import CoverageFilterBase;
+from Transformer.Framework.FilterBases import CoverageFilterBase;
 
 
 # ----------------------
@@ -18,14 +18,14 @@ class SpacegroupFilter(CoverageFilterBase):
     # -----------
 
     def __init__(self, removeSpacegroups, coverage = 'full'):
-        # Call the base class constructor.
-
-        super(SpacegroupFilter, self).__init__(coverage);
-
         # Parameter validation.
 
         if removeSpacegroups == None:
             raise Exception("removeSpacegroups must not be None.")
+
+        # Call the base class constructor.
+
+        super(SpacegroupFilter, self).__init__(coverage = coverage);
 
         # Store the list of spacegroups to remove and the coverage level.
 

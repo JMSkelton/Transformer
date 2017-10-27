@@ -1,4 +1,4 @@
-# Transformer/Utilities/MultiprocessingHelper.py by J. M. Skelton
+# Transformer/Utilities/MultiprocessingHelper.py
 
 
 # -------

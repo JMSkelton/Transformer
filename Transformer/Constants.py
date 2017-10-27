@@ -1,4 +1,4 @@
-# Transformer/Constants.py by J. M. Skelton
+# Transformer/Constants.py
 
 
 # --------------
@@ -25,10 +25,10 @@ def SymbolToAtomicNumber(symbol):
         if symbol.title() == testSymbol:
             return i;
 
-    raise Exception("Error: Atomic symbol '{0}' not found in the internal periodic table.".format(symbol));
+    return None;
 
 def AtomicNumberToSymbol(atomicNumber):
-    if atomicNumber < len(PeriodicTable):
+    if atomicNumber >= 0 and atomicNumber < len(PeriodicTable):
         return PeriodicTable[atomicNumber];
     else:
-        raise Exception("Error: Atomic number {0} not assigned a symbol in the internal periodic table.".format(atomicNumber));
+        return None;

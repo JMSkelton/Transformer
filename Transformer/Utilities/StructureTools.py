@@ -1,4 +1,4 @@
-# Transformer/Utilities/StructureTools.py by J. M. Skelton
+# Transformer/Utilities/StructureTools.py
 
 
 # -------
@@ -81,8 +81,7 @@ def PrintSpacegroupGroupSummary(spacegroupGroups):
 
     dataRowFormatCode = "{{0: <3}} {{1: <12}} | {{2: >{0},}} | {{3: >{0},}}".format(fieldLength);
 
-    for key, structureCount, degeneracySum in zip(keys, structureCounts, degeneracySums):
-        spacegroupNumber, spacegroupSymbol = key;
+    for (spacegroupNumber, spacegroupSymbol), structureCount, degeneracySum in zip(keys, structureCounts, degeneracySums):
         print(dataRowFormatCode.format(spacegroupNumber, spacegroupSymbol, degeneracySum,  structureCount));
 
     print("");

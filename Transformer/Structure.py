@@ -1,4 +1,4 @@
-# Transformer/Structure.py by J. M. Skelton
+# Transformer/Structure.py
 
 
 # -------
@@ -467,12 +467,24 @@ class Structure:
 
         atomicSymbolsList = [];
 
-        # If an atomic-symbol lookup table is provided, get the symbols from that; if not get them from the periodic table in the Constants module.
+        # Translate each atom-type number into a symbol.
 
-        if atomicSymbolLookupTable != None:
-            atomicSymbolsList = [atomicSymbolLookupTable[typeNumber] for typeNumber in self.GetAtomTypeNumbers()];
-        else:
-            atomicSymbolsList = [Constants.AtomicNumberToSymbol(typeNumber) for typeNumber in self.GetAtomTypeNumbers()];
+        for typeNumber in self.GetAtomTypeNumbers():
+            # If an atomic-symbol lookup table is provided, look for the atom-type number in that first.
+
+            if atomicSymbolLookupTable != None and typeNumber in atomicSymbolLookupTable:
+                atomicSymbolsList.append(atomicSymbolLookupTable[typeNumber]);
+            else:
+                # If not, try the periodic table in the Constants module.
+
+                atomicSymbol = Constants.AtomicNumberToSymbol(typeNumber);
+
+                if atomicSymbol != None:
+                    atomicSymbolsList.append(atomicSymbol);
+                else:
+                    # If all else fails, simply convert the atom-type number to a string.
+
+                    atomicSymbolsList.append(str(typeNumber));
 
         # Use the list of types to build a list of atomicSymbols and counts to add to the POSCAR header.
 
@@ -528,16 +540,24 @@ class Structure:
 
         atomicSymbols, atomCounts = self.GetAtomicSymbolsCounts(atomicSymbolLookupTable = atomicSymbolLookupTable);
 
-        # Obligatory cryptic one-liner (!).
+        # Build the chemical formula.
 
-        chemicalFormula = "".join("{0}{1}".format(*item) for item in zip(atomicSymbols, atomCounts));
+        chemicalFormula = "";
+
+        for symbol, count in zip(atomicSymbols, atomCounts):
+            # If the symbol starts with a digit or a +/- character, wrap it in parentheses -- otherwise, the chemical formula will be difficult to read.
+
+            if symbol[0] in "0123456789+-" or symbol[-1] in "0123456789+-":
+                symbol = "({0})".format(symbol);
+
+            chemicalFormula += "{0}{1}".format(symbol, count);
 
         # Only store a copy of the chemical formula if atomicSymbolLookupTable is not set.
 
         if atomicSymbolLookupTable == None:
             self._pChemicalFormula = chemicalFormula;
 
-        return self._pChemicalFormula;
+        return chemicalFormula;
 
     def GetNeighbourTable(self):
         # Compute and return a table of interatomic distances (a neighbour table).
