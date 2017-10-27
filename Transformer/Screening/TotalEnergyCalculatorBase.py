@@ -98,7 +98,7 @@ class TotalEnergyCalculatorBase(object):
 
         if tempDirectories == None:
             return None;
-        elif len(tempDirectories) == 1:
+        elif numWorkerProcesses == None:
             return tempDirectories[0];
         else:
             return tempDirectories;
