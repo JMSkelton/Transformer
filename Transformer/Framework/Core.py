@@ -37,192 +37,370 @@ except ImportError:
     pass;
 
 
-# ----------------------------------
-# "Core" AtomicSubstitutions Routine
-# ----------------------------------
+# ---------------
+# Public Routines
+# ---------------
 
 def AtomicSubstitutions(
-        parentStructure, substitutions,
-        storeIntermediate = None, tolerance = None,
-        symmetryMerge = True,
+        structureOrStructureSet, substitutions,
+        tolerance = None, symmetryMerge = True, parentSymmetryOperations = None,
         filterObj = None,
         printProgressUpdate = True,
         useMP = False, mpNumProcesses = None
         ):
 
-    if storeIntermediate != None:
-        # If storeIntermediate is provided, sanity-check the indices.
+    # Construct a generator to perform the substitutions.
 
-        for index in storeIntermediate:
-            if index > len(substitutions):
-                raise Exception("Error: If provided, indices in storeIntermediate must be between 0 and the number of substitutions specified by atomicSubstitutions.");
-    else:
-        # If not initialise it to an index array containing 0 (initial structure) and 1 .. N (all substitutions).
+    generator = _AtomicSubstitutionsIter(
+        structureOrStructureSet, substitutions,
+        tolerance = tolerance, symmetryMerge = symmetryMerge, parentSymmetryOperations = parentSymmetryOperations,
+        filterObj = filterObj,
+        printProgressUpdate = printProgressUpdate,
+        useMP = useMP, mpNumProcesses = mpNumProcesses
+        );
 
-        storeIntermediate = [0] + [i + 1 for i in range(0, len(substitutions))];
+    # Keep track of the substitutions performed.
 
-    # Variables to keep track of the current set of structures and associated degeneracies.
+    substitutions = [];
 
-    currentStructures = [parentStructure];
-    currentDegeneracies = [1];
+    # Store intermediate structure sets and the substitution numbers at which they have been captured.
 
-    # Store intermediate structure sets obtained after applying substitutions if required.
+    storeIntermediate, intermediateStructureSets = [], [];
 
-    intermediateStructures = [];
+    # Store the number of permutations at each round of substitution.
 
-    if 0 in storeIntermediate:
-        intermediateStructures.append(
-            StructureTools.GroupStructuresBySpacegroup(currentStructures, currentDegeneracies, tolerance = tolerance)
-            );
+    permutationCounts = [];
 
-    # If symmetryMerge is set, use the symmetry operations of the parent structure during merging.
+    # Run the generator to collect the results.
 
-    parentSymmetryOperations = None;
+    for i, (substitution, structureSet, permutationCount) in enumerate(generator):
+        substitutions.append(substitution);
 
-    if symmetryMerge:
-        parentSymmetryOperations = parentStructure.GetSymmetryOperations(tolerance = tolerance);
+        if structureSet != None:
+            storeIntermediate.append(i);
+            intermediateStructureSets.append(structureSet);
 
-    # If a filter is provided via the filterObj parameter, perform initialisation.
-
-    if filterObj != None:
-        # Check whether the filter is MP safe and, if not, reset useMP and issue a RuntimeWarning.
-
-        if useMP and not filterObj.IsMPSafe():
-            warnings.warn("The provided filter is not safe for use with multiprocessing -> useMP will be reset.", RuntimeWarning);
-
-        filterObj.Initialise(substitutions, tolerance, printProgressUpdate, useMP, mpNumProcesses);
-
-    # Keep track of the expected number of permutations expected at each substitution.
-
-    permutationCounts = [1];
-
-    # Decide whether to display a tqdm progress bar while generating child structures.
-
-    progressBar = printProgressUpdate and _TQDM;
-
-    # Perform substitutions.
-
-    for i, substitution in enumerate(substitutions):
-        # Get the atom-type numbers of the atoms to find and replace.
-
-        atomType1, atomType2 = substitution;
-
-        atomTypeNumber1 = Structure.AtomTypeToAtomTypeNumber(atomType1);
-        atomTypeNumber2 = Structure.AtomTypeToAtomTypeNumber(atomType2);
-
-        # Sanity check.
-
-        if atomTypeNumber1 == None:
-            raise Exception("Error: The atom-type number/symbol of the atom to substitute cannot be set to None.");
-
-        # Get indices of atoms that have been manipulated in substitutions up to and including the current one.
-
-        substitutionAtoms = set();
-
-        for atomType1, atomType2 in substitutions[:i + 1]:
-            substitutionAtoms.add(
-                Structure.AtomTypeToAtomTypeNumber(atomType1)
-                );
-
-            substitutionAtoms.add(
-                Structure.AtomTypeToAtomTypeNumber(atomType2)
-                );
-
-        if printProgressUpdate:
-            print("AtomicSubstitutions(): Performing substitution {0} ({1} -> {2})".format(i + 1, atomType1, atomType2));
-            print("AtomicSubstitutions(): Initial structure set contains {0} structure(s)".format(len(currentStructures)));
-
-        # If a filter is being used, call its OnStartSubstitution() method with the current substitution index.
-
-        if filterObj != None:
-            filterObj.OnStartSubstitution(i);
-
-        # Generate substituted child structures.
-
-        structureSet, numGen = None, None;
-
-        # If useMP is set, use the parallel generation routine; if not, use the serial one.
-
-        if useMP:
-            structureSet, numGen = _GenerateSubstitutedStructutesMP(
-                currentStructures, currentDegeneracies, (atomTypeNumber1, atomTypeNumber2),
-                tolerance, substitutionAtoms, parentSymmetryOperations, filterObj,
-                progressBar, mpNumProcesses
-                );
-        else:
-            structureSet, numGen = _GenerateSubstitutedStructutes(
-                currentStructures, currentDegeneracies, (atomTypeNumber1, atomTypeNumber2),
-                tolerance, substitutionAtoms, parentSymmetryOperations, filterObj,
-                progressBar
-                );
-
-        if printProgressUpdate:
-            numStructures = structureSet.GetStructureCount();
-
-            if numStructures < numGen:
-                print("AtomicSubstitutions(): Substituted set contained {0} structure(s)".format(numGen));
-                print("AtomicSubstitutions(): Filtering/merging removed {0} structure(s)".format(numGen - numStructures));
-
-                print("");
-
-        # If printProgressUpdate is set, print a summary of the spacegroupGroups.
-
-        if printProgressUpdate:
-            StructureTools.PrintSpacegroupGroupSummary(
-                structureSet.GetStructureSet()
-                );
-
-        # Store the result if required.
-
-        if i + 1 in storeIntermediate:
-            intermediateStructures.append(
-                structureSet.GetStructureSet()
-                );
-
-        # Update the permutation count; all structures should have the same composition -> take the atom-type numbers from the first one.
-
-        atomTypes = currentStructures[0].GetAtomTypeNumbers();
-
-        atomCount = 0;
-
-        for atomType in atomTypes:
-            if atomType == atomTypeNumber1:
-                atomCount = atomCount + 1;
-
-        permutationCounts.append(
-            permutationCounts[-1] * atomCount
-            );
-
-        # Update the current structure set/degeneracies.
-
-        currentStructures, currentDegeneracies = structureSet.GetStructureSetFlat();
+        permutationCounts.append(permutationCount);
 
     # If printProgressUpdate is set, print a final summary.
 
     if printProgressUpdate:
-        print("AtomicSubstitutions(): All substitutions performed.");
+        print("AtomicSubstitutions: All substitutions performed.");
         print("")
 
         # Prepend [None] to substitutions for printing the "zeroth" operation (initial structure).
 
         _PrintResultSummary(
-            [None] + substitutions, intermediateStructures, permutationCounts, storeIntermediate
+            substitutions, intermediateStructureSets, permutationCounts, storeIntermediate
             );
 
-    # After all substitutions have been performed, currentStructures and currentDegeneracies contain the result of the last substitution, and intermediateStructures contains the intermediate results at each step grouped by spacegroup.
+    # Return the list of captured intermediate structures.
 
-    return ((currentStructures, currentDegeneracies), intermediateStructures);
+    return intermediateStructureSets;
+
+def AtomicSubstitutionsIter(
+    structureOrStructureSet, substitutions,
+    tolerance = None, symmetryMerge = True, parentSymmetryOperations = None,
+    filterObj = None,
+    printProgressUpdate = True,
+    useMP = False, mpNumProcesses = None
+    ):
+
+    # Construct a generator to perform the substitutions.
+
+    generator = _AtomicSubstitutionsIter(
+        structureOrStructureSet, substitutions,
+        tolerance = tolerance, symmetryMerge = symmetryMerge, parentSymmetryOperations = parentSymmetryOperations,
+        filterObj = filterObj,
+        printProgressUpdate = printProgressUpdate,
+        useMP = useMP, mpNumProcesses = mpNumProcesses
+        );
+
+    # Run the generator and yield captured structure sets.
+
+    for _, structureSet, _ in generator:
+        if structureSet != None:
+            yield structureSet;
+
+# ------------------------------------
+# Main Substitution Generator Function
+# ------------------------------------
+
+def _AtomicSubstitutionsIter(
+    structureOrStructureSet, substitutions,
+    tolerance = None, symmetryMerge = True, parentSymmetryOperations = None,
+    filterObj = None,
+    printProgressUpdate = True,
+    useMP = False, mpNumProcesses = None
+    ):
+
+    # Perform initialisation.
+
+    initialStructureSet, initialPermutationCount, substitutions, storeIntermediate, parentSymmetryOperations = _AtomicSubstitutions_Initialise(
+        structureOrStructureSet, substitutions,
+        tolerance, symmetryMerge, parentSymmetryOperations,
+        filterObj, printProgressUpdate, useMP, mpNumProcesses
+        );
+
+    # Yield the initial structure set and permutation count.
+
+    yield (None, initialStructureSet, initialPermutationCount);
+
+    # Perform substitutions.
+
+    currentStructureSet, currentPermutationCount = initialStructureSet, initialPermutationCount;
+
+    for substitutionIndex in range(0, len(substitutions)):
+        currentStructureSet, currentPermutationCount = _AtomicSubstitutions_PerformSubstitution(
+            currentStructureSet, currentPermutationCount,
+            substitutions, substitutionIndex, tolerance, parentSymmetryOperations, filterObj,
+            printProgressUpdate, useMP, mpNumProcesses
+            );
+
+        # Yield the current permutation count, plus the current structure set if it is to be captured.
+
+        if substitutionIndex + 1 in storeIntermediate:
+            yield (substitutions[substitutionIndex], currentStructureSet, currentPermutationCount);
+        else:
+            yield (substitutions[substitutionIndex], None, currentPermutationCount);
+
+# ----------------------
+# Initialisation Routine
+# ----------------------
+
+def _AtomicSubstitutions_Initialise(
+    structureOrStructureSet, substitutions,
+    tolerance, symmetryMerge, parentSymmetryOperations,
+    filterObj, printProgressUpdate, useMP, mpNumProcesses
+    ):
+
+    if structureOrStructureSet == None:
+        raise Exception("Error: structureOrStructureSet cannot be None.");
+
+    # Set up an initial structure set.
+
+    structureSet = None;
+
+    if isinstance(structureOrStructureSet, Structure.Structure):
+        # If an initial structure is supplied, create a structure set from it.
+
+        structureSet = StructureSet.StructureSetOpt(
+            structureOrStructureSet.GetAtomCount(), tolerance = tolerance, parentSymmetryOperations = parentSymmetryOperations,
+            structures = [structureOrStructureSet], degeneracies = [1]
+            );
+    elif isinstance(structureOrStructureSet, StructureSet.StructureSet):
+        # If a structure set is supplied, use that.
+
+        structureSet = structureOrStructureSet;
+    else:
+        raise Exception("Error: structureOrStructureSet must be either a Structure, a StructureSet, or a derived class.");
+
+    structuresFlat, degeneraciesFlat = structureSet.GetStructureSetFlat();
+
+    # If symmetryMerge is set, and parentSymmetryOperations is not, set it automatically if sensible to do so.
+
+    if symmetryMerge and parentSymmetryOperations is None:
+        if len(structuresFlat) == 1:
+            parentSymmetryOperations = structuresFlat[0].GetSymmetryOperations(tolerance = tolerance);
+        else:
+            raise Exception("Error: When an initial structure set is supplied, if symmetryMerge is set (the default), a set of parent symmetry operations must be supplied.");
+
+    # If the initial structure set contains more than one structure, we need to check that all the structures have the same atomic composition.
+
+    if structureSet.GetStructureCount() > 1:
+        atomCount = structuresFlat[0].GetAtomCount();
+        atomTypeNumbers = structuresFlat[0].GetAtomTypeNumbersNumPy(copy = False);
+
+        for structure in structuresFlat[1:]:
+            if structure.GetAtomCount() != atomCount:
+                raise Exception("Error: All structures in the initial structure set must contain the same number of atoms.");
+
+            if (structure.GetAtomTypeNumbersNumPy(copy = False) != atomTypeNumbers).any():
+                raise Exception("Error: All structures in the initial structure set must have the same atomic composition.");
+
+    # Unpack substitutions and set up a list of indices of intermediate results to store.
+
+    if substitutions == None or len(substitutions) == 0:
+        raise Exception("Error: substitutions cannot be None and must contain at least one element.");
+
+    substitutionsFlat = [];
+    storeIntermediate = [0];
+
+    for substitution in substitutions:
+        # Each entry in substitutions may be a tuple or a list of tuples.
+
+        if isinstance(substitution, list):
+            substitutionsFlat += substitution;
+        else:
+            substitutionsFlat.append(substitution);
+
+        storeIntermediate.append(
+            len(substitutionsFlat)
+            );
+
+    # Check that the sequence of substitutions can be performed.
+
+    typeNumbers, atomCounts = structuresFlat[0].GetAtomTypeNumbersCounts();
+
+    # Keep a running count of the composition.
+
+    runningCount = {
+        typeNumber : atomCount
+            for typeNumber, atomCount in zip(typeNumbers, atomCounts)
+        };
+
+    sequenceValid = True;
+
+    for atomType1, atomType2 in substitutionsFlat:
+        # Convert substitution atom types to atom-type numbers.
+
+        atomTypeNumber1 = Structure.AtomTypeToAtomTypeNumber(atomType1);
+        atomTypeNumber2 = Structure.AtomTypeToAtomTypeNumber(atomType2);
+
+        # Check the type number to be substituted is in the current composition.
+
+        if atomTypeNumber1 not in runningCount:
+            sequenceValid = False;
+            break;
+
+        if runningCount[atomTypeNumber1] == 0:
+            sequenceValid = False;
+            break;
+
+        # Update the running count.
+
+        runningCount[atomTypeNumber1] -= 1;
+
+        if atomTypeNumber2 != None:
+            if atomTypeNumber2 in runningCount:
+                runningCount[atomTypeNumber2] += 1;
+            else:
+                runningCount[atomTypeNumber2] = 1;
+
+    if not sequenceValid:
+        raise Exception("Error: Supplied sequence of substitutions is not valid for the composition of the supplied structure(s).");
+
+    # Set the initial permutation count to the sum of the degeneracies.
+
+    initialPermutationCount = sum(degeneraciesFlat);
+
+    # Finally, if a filter is provided via the filterObj keyword argument, initialise it.
+
+    if filterObj != None:
+        filterObj.Initialise(substitutions, tolerance, printProgressUpdate, useMP, mpNumProcesses);
+
+    # Return the initial structure set and permutation count, along with the parent symmetry operations (if using).
+
+    return (structureSet, initialPermutationCount, substitutionsFlat, storeIntermediate, parentSymmetryOperations);
 
 
-# -----------------------------------------
-# Substituted Structure Generation Routines
-# -----------------------------------------
+# --------------------
+# Substitution Routine
+# --------------------
+
+def _AtomicSubstitutions_PerformSubstitution(
+    currentStructureSet, currentPermutationCount,
+    substitutions, substitutionIndex, tolerance, parentSymmetryOperations, filterObj,
+    printProgressUpdate, useMP, mpNumProcesses
+    ):
+
+    # Get the atom-type numbers of the atoms to find and replace.
+
+    atomType1, atomType2 = substitutions[substitutionIndex];
+
+    atomTypeNumber1 = Structure.AtomTypeToAtomTypeNumber(atomType1);
+    atomTypeNumber2 = Structure.AtomTypeToAtomTypeNumber(atomType2);
+
+    # Get indices of atoms that have been manipulated in substitutions up to and including the current one.
+
+    substitutionAtoms = set();
+
+    for atomType1, atomType2 in substitutions[:substitutionIndex + 1]:
+        substitutionAtoms.add(
+            Structure.AtomTypeToAtomTypeNumber(atomType1)
+            );
+
+        substitutionAtoms.add(
+            Structure.AtomTypeToAtomTypeNumber(atomType2)
+            );
+
+    if printProgressUpdate:
+        print("AtomicSubstitutions: Performing substitution {0} ({1} -> {2})".format(substitutionIndex + 1, atomType1, atomType2));
+        print("AtomicSubstitutions: Initial structure set contains {0} structure(s)".format(currentStructureSet.GetStructureCount()));
+
+        print("");
+
+    # If a filter is being used, call its OnStartSubstitution() method with the current substitution index.
+
+    if filterObj != None:
+        filterObj.OnStartSubstitution(substitutionIndex);
+
+    # Generate substituted child structures.
+
+    newStructureSet, numGen = None, None;
+
+    # If useMP is set, use the parallel generation routine; if not, use the serial one.
+
+    if useMP:
+        newStructureSet, numGen = _GenerateSubstitutedStructutesMP(
+            currentStructureSet, (atomTypeNumber1, atomTypeNumber2),
+            tolerance, substitutionAtoms, parentSymmetryOperations, filterObj,
+            printProgressUpdate, mpNumProcesses
+            );
+    else:
+        newStructureSet, numGen = _GenerateSubstitutedStructutes(
+            currentStructureSet, (atomTypeNumber1, atomTypeNumber2),
+            tolerance, substitutionAtoms, parentSymmetryOperations, filterObj,
+            printProgressUpdate
+            );
+
+    if printProgressUpdate:
+        numStructures = newStructureSet.GetStructureCount();
+
+        if numStructures < numGen:
+            print("AtomicSubstitutions: Substituted set contained {0} structure(s)".format(numGen));
+            print("AtomicSubstitutions: Filtering/merging removed {0} structure(s)".format(numGen - numStructures));
+
+            print("");
+
+     # Calculate a new permutation count.
+
+    newPermutationCount = None;
+
+    # All structures should have the same composition -> take the atom-type numbers from a random one in the set.
+
+    structureSet = newStructureSet.GetStructureSet();
+
+    for spacegroup, (structures, degeneracies) in structureSet.items():
+        atomTypeNumbers = structures[0].GetAtomTypeNumbersNumPy(copy = False);
+
+        newPermutationCount = currentPermutationCount * ((atomTypeNumbers == atomTypeNumber1).sum() + 1);
+
+        break;
+
+    # If printProgressUpdate is set, print a summary of the structure set.
+
+    if printProgressUpdate:
+        StructureTools.PrintStructureSetSummary(newStructureSet);
+
+    # Return the new structure set and permutation count.
+
+    return (newStructureSet, newPermutationCount);
+
+
+# -----------------------------------------------
+# Serial Substituted Structure Generation Routine
+# -----------------------------------------------
 
 def _GenerateSubstitutedStructutes(
-        parentStructures, parentDegeneracies, substitution,
+        initialStructureSet, substitution,
         tolerance, substitutionAtoms, parentSymmetryOperations, filterObj,
-        progressBar
+        printProgressUpdate
         ):
+
+    # Convert the initial structure set to flat structure and degeneracy lists.
+
+    parentStructures, parentDegeneracies = initialStructureSet.GetStructureSetFlat();
 
     # Unpack the atom-type numbers of the atoms to find and replace.
 
@@ -236,18 +414,18 @@ def _GenerateSubstitutedStructutes(
 
     iValues = range(0, len(parentStructures));
 
+    # Decide whether to display a tqdm progress bar while generating child structures.
+
+    progressBar = printProgressUpdate and _TQDM;
+
     # If progressBar is set, the iterator is wrapped in the tqdm function, which, if the tqdm module is available, will display a progress bar.
 
     if progressBar:
-        # Padding before progress bar.
-
-        print("");
-
         iValues = tqdm.tqdm(iValues);
 
     # We cannot initialise structure set(s) until we have a first child structure.
 
-    structureSet, structureSetFiltered = None, None;
+    newStructureSet, newStructureSetFiltered = None, None;
 
     for i in iValues:
         # Fetch the parent structure and degeneracies.
@@ -270,7 +448,7 @@ def _GenerateSubstitutedStructutes(
 
         # Initialise structure set(s), if not already done.
 
-        if structureSet == None:
+        if newStructureSet == None:
             atomCount = newStructures[0].GetAtomCount();
 
             # As a performance optimisation, we only compare the positions of atoms involved in the substitution.
@@ -282,14 +460,14 @@ def _GenerateSubstitutedStructutes(
                     if atomTypeNumber in atomIndexRanges
                 ];
 
-            structureSet = StructureSet.StructureSetOpt(
+            newStructureSet = StructureSet.StructureSetOpt(
                 atomCount, tolerance = tolerance, parentSymmetryOperations = parentSymmetryOperations, compareAtomIndexRanges = compareAtomIndexRanges
                 );
 
             # If a filter has been supplied and requires the filtered structures, set up a second structure set to store them.
 
             if filterObj != None and filterObj.RequiresFilteredStructures():
-                structureSetFiltered = StructureSet.StructureSetOpt(
+                newStructureSetFiltered = StructureSet.StructureSetOpt(
                     atomCount, tolerance = tolerance, parentSymmetryOperations = parentSymmetryOperations, compareAtomIndexRanges = compareAtomIndexRanges
                     );
 
@@ -319,14 +497,14 @@ def _GenerateSubstitutedStructutes(
 
             # Update structure set(s).
 
-            structureSet.Update(passedStructures, passedDegeneracies);
+            newStructureSet.Update(passedStructures, passedDegeneracies);
 
-            if structureSetFiltered != None:
-                structureSetFiltered.Update(rejectedStructures, rejectedDegeneracies);
+            if newStructureSetFiltered != None:
+                newStructureSetFiltered.Update(rejectedStructures, rejectedDegeneracies);
         else:
             # Update structureSet with the new structures and degeneracies.
 
-            structureSet.Update(newStructures, newDegeneracies);
+            newStructureSet.Update(newStructures, newDegeneracies);
 
     if progressBar:
         # Padding after progress bar.
@@ -339,25 +517,34 @@ def _GenerateSubstitutedStructutes(
         # If required, pass SetFilteredStructures() the list of structures removed by TestSubstitutedStructure() and the associated degeneracies.
 
         if filterObj.RequiresFilteredStructures():
-            filterObj.SetFilteredStructureSet(structureSetFiltered);
+            filterObj.SetFilteredStructureSet(newStructureSetFiltered);
 
         # Pass the structure set to FinaliseMergedStructureSet().
 
-        filterObj.FinaliseMergedStructureSet(structureSet);
+        filterObj.FinaliseMergedStructureSet(newStructureSet);
 
     # Return the merged substituted structures, associated degeneracies and the number of generated substituted structures.
 
-    return (structureSet, numGen);
+    return (newStructureSet, numGen);
+
+
+# -------------------------------------------------
+# Parallel Substituted Structure Generation Routine
+# -------------------------------------------------
 
 # Polling delay for synchronisation between main and worker processes.
 
 _GenerateSubstitutedStructutesMP_PollDelay = 0.1;
 
 def _GenerateSubstitutedStructutesMP(
-        parentStructures, parentDegeneracies, substitution,
+        initialStructureSet, substitution,
         tolerance, substitutionAtoms, parentSymmetryOperations, filterObj,
-        progressBar, mpNumProcesses
+        printProgressUpdate, mpNumProcesses
         ):
+
+    # Convert the initial structure set to flat structure and degeneracy lists.
+
+    parentStructures, parentDegeneracies = initialStructureSet.GetStructureSetFlat();
 
     # Queue to pass parent structures to worker processes.
 
@@ -408,11 +595,11 @@ def _GenerateSubstitutedStructutesMP(
 
     iValues = range(0, len(parentStructures));
 
+    # Decide whether to display a tqdm progress bar while generating child structures.
+
+    progressBar = printProgressUpdate and _TQDM;
+
     if progressBar:
-        # Padding before progress bar.
-
-        print("");
-
         iValues = tqdm.tqdm(iValues);
 
     for i in iValues:
@@ -464,21 +651,21 @@ def _GenerateSubstitutedStructutesMP(
 
     # Merge result sets using a parallel "divide and conquer" reduction.
 
-    structureSet, structureSetFiltered, numGen = _GenerateSubstitutedStructutesMP_Reduce(
-        results, progressBar
+    newStructureSet, newStructureSetFiltered, numGen = _GenerateSubstitutedStructutesMP_Reduce(
+        results, printProgressUpdate
         );
 
     # If a filter has been supplied, call the SetFilteredStructures() and FinaliseMergedStructureSet() methods.
 
     if filterObj != None:
         if filterObj.RequiresFilteredStructures():
-            filterObj.SetFilteredStructureSet(structureSetFiltered);
+            filterObj.SetFilteredStructureSet(newStructureSetFiltered);
 
-        filterObj.FinaliseMergedStructureSet(structureSet);
+        filterObj.FinaliseMergedStructureSet(newStructureSet);
 
     # Return the structures and degeneracies from the merged set, along with the number of structures generated.
 
-    return (structureSet, numGen);
+    return (newStructureSet, numGen);
 
 def _GenerateSubstitutedStructutesMP_GenerateProcessMain(*args):
     # Unpack arguments.
@@ -578,7 +765,7 @@ def _GenerateSubstitutedStructutesMP_GenerateProcessMain(*args):
 
             time.sleep(_GenerateSubstitutedStructutesMP_PollDelay);
 
-def _GenerateSubstitutedStructutesMP_Reduce(results, progressBar):
+def _GenerateSubstitutedStructutesMP_Reduce(results, printProgressUpdate):
     # If there is only one result in the results list, simply return it.
 
     if len(results) == 1:
@@ -592,7 +779,7 @@ def _GenerateSubstitutedStructutesMP_Reduce(results, progressBar):
 
     # Setting a tqdm-based progress bar for the reduction would be (a) fiddly, and (b) not particularly informative; if a progress bar is requested, we print a set of status messages instead.
 
-    if progressBar:
+    if printProgressUpdate:
         numStructures = sum(
             structureSet.GetStructureCount() for structureSet, _, _ in results
             );
@@ -605,9 +792,9 @@ def _GenerateSubstitutedStructutesMP_Reduce(results, progressBar):
                 );
 
         if reducingFilteredStructureSets:
-            print("AtomicSubstitutions(): Reducing {0} structure set(s) w/ {1} + {2} structure(s)".format(len(results), numStructures, numStructuresFiltered));
+            print("MPReduce: Reducing {0} structure set(s) w/ {1} + {2} structure(s)".format(len(results), numStructures, numStructuresFiltered));
         else:
-            print("AtomicSubstitutions(): Reducing {0} structure set(s) w/ {1} structure(s)".format(len(results), numStructures));
+            print("MPReduce: Reducing {0} structure set(s) w/ {1} structure(s)".format(len(results), numStructures));
 
     # The reduction is done via a divide-and-conquer process where N // 2 reductions are performed at each step.
     # The final reduction is a serial merge, while prior steps can be done in parallel using a process pool.
@@ -686,7 +873,7 @@ def _GenerateSubstitutedStructutesMP_Reduce(results, progressBar):
 
         # If required, print a status message.
 
-        if progressBar:
+        if printProgressUpdate:
             numStructures2 = sum(
                 structureSet.GetStructureCount() for structureSet, _, _ in results
                 );
@@ -700,13 +887,13 @@ def _GenerateSubstitutedStructutesMP_Reduce(results, progressBar):
 
             if numStructures2 < numStructures1 or (reducingFilteredStructureSets and numStructuresFiltered2 < numStructuresFiltered):
                 if reducingFilteredStructureSets:
-                    print("AtomicSubstitutions(): Reduced {0} + {1} -> {2} + {3} structure(s)".format(numStructures1, numStructuresFiltered1, numStructures2, numStructuresFiltered2));
+                    print("MPReduce: Reduced {0} + {1} -> {2} + {3} structure(s)".format(numStructures1, numStructuresFiltered1, numStructures2, numStructuresFiltered2));
                 else:
-                    print("AtomicSubstitutions(): Reduced {0} -> {1} structure(s)".format(numStructures1, numStructures2));
+                    print("MPReduce: Reduced {0} -> {1} structure(s)".format(numStructures1, numStructures2));
 
     # Once the merging is complete, return the merged structure set(s) and count.
 
-    if progressBar:
+    if printProgressUpdate:
         print("");
 
     return results[0];
@@ -738,7 +925,7 @@ def _GenerateSubstitutedStructutesMP_Reduce_MapFunction(args):
 # Printing Functions
 # ------------------
 
-def _PrintResultSummary(substitutions, intermediateStructures, permutationCounts, storeIntermediate):
+def _PrintResultSummary(substitutions, intermediateStructureSets, permutationCounts, storeIntermediate):
     # Find the largest permutation count (= maximum integer value to be printed), and get the length of the text fields.
 
     fieldLength = max(
@@ -761,7 +948,7 @@ def _PrintResultSummary(substitutions, intermediateStructures, permutationCounts
 
     dataRowFormatCode = "{{0: <3}} {{1: <4}} {{2: <2}} {{3: <4}} | {{4: >{0}}} | {{5: >{0}}} | {{6: >{0}}}".format(fieldLength);
 
-    intermediateStructuresPointer = 0;
+    intermediateStructureSetsPointer = 0;
 
     for i, substitution in enumerate(substitutions):
         # The first element of substitutions will be None (input structure; no substitution).
@@ -781,18 +968,14 @@ def _PrintResultSummary(substitutions, intermediateStructures, permutationCounts
         if i in storeIntermediate:
             # If intermediate structures following the current substitution were captured, display the number of unique structures along the sum of the degeneracies to compare to the expected number of permutations.
 
-            spacegroupGroups = intermediateStructures[intermediateStructuresPointer];
+            structureSet = intermediateStructureSets[intermediateStructureSetsPointer];
 
-            # Sum up the number of structures in each group.
+            # Count the number of structures and sum of degeneracies.
 
-            structureCount = sum(
-                len(structures) for structures, _ in spacegroupGroups.values()
-                );
-
-            # Sum the degeneracies of each structure.
+            structureCount = structureSet.GetStructureCount();
 
             degeneracySum = sum(
-                sum(degeneracies) for _, degeneracies in spacegroupGroups.values()
+                sum(degeneracies) for _, degeneracies in structureSet.GetStructureSet().values()
                 );
 
             dataRowData = dataRowData + [
@@ -801,7 +984,7 @@ def _PrintResultSummary(substitutions, intermediateStructures, permutationCounts
                 "{0:,}".format(permutationCounts[i]),
                 ];
 
-            intermediateStructuresPointer = intermediateStructuresPointer + 1;
+            intermediateStructureSetsPointer = intermediateStructureSetsPointer + 1;
         else:
             # If not, print only the expected number of permutations.
 

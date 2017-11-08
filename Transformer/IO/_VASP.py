@@ -1,4 +1,4 @@
-# Transformer/IO/VASP.py
+# Transformer/IO/_VASP.py
 
 
 # -------
@@ -8,17 +8,17 @@
 import warnings;
 
 from Transformer import Constants;
+from Transformer.IO import _Common;
+from Transformer.Utilities import StructureTools;
 
 from Transformer.Structure import Structure;
-
-from Transformer.Utilities import StructureTools;
 
 
 # ---------
 # Functions
 # ---------
 
-def ReadPOSCARFile(filePath):
+def ReadPOSCARFile(filePath, atomTypeNumberLookupTable = None):
     # Variables to collect.
 
     systemName = None;
@@ -114,24 +114,25 @@ def ReadPOSCARFile(filePath):
 
     # Build a list of atom-type numbers.
 
-    atomTypeNumbers = [];
+    atomTypeNumbers = None;
 
     if atomTypes != None:
         # If atom types were read from the POSCAR file, convert these to atomic numbers.
 
+        atomicSymbols = [];
+
         for atomType, atomCount in zip(atomTypes, atomCounts):
-            # Try and look up an atom-type number from the periodic table in the Constants module; failing that, set it to an unused negative number.
+            atomicSymbols = atomicSymbols + [atomType] * atomCount;
 
-            atomTypeNumber = Constants.SymbolToAtomicNumber(atomType);
+        # Convert the atomic symbols to atom-type numbers.
 
-            if atomTypeNumber == None:
-                atomTypeNumber = min(min(atomTypeNumbers), 0) - 1;
-
-            atomTypeNumbers = atomTypeNumbers + [atomTypeNumber] * atomCount;
+        atomTypeNumbers = _Common.AtomicSymbolsToAtomTypeNumbers(atomicSymbols, atomTypeNumberLookupTable = atomTypeNumberLookupTable);
     else:
         # If not, issue a warning and assign negative type numbers from -1.
 
-        warnings.warn("Structure objects returned by reading VASP 4-format POSCAR files numbers cannot be initialised with negative atomic numbers from -1.", UserWarning);
+        warnings.warn("Structure objects returned by reading VASP 4-format POSCAR files numbers will be initialised with negative atomic numbers from -1.", UserWarning);
+
+        atomTypeNumbers = [];
 
         for i, atomCount in enumerate(atomCounts):
             atomTypeNumbers = atomTypeNumbers + [-1 * (i + 1)] * atomCount;
@@ -143,9 +144,7 @@ def ReadPOSCARFile(filePath):
 
     # Return a Structure object.
 
-    return Structure(
-        latticeVectors, atomPositions, atomTypeNumbers, name = systemName
-        );
+    return Structure(latticeVectors, atomPositions, atomTypeNumbers, name = systemName);
 
 def WritePOSCARFile(structure, filePath, atomicSymbolLookupTable = None):
     with open(filePath, 'w') as outputWriter:

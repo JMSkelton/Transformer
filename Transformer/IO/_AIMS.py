@@ -1,20 +1,22 @@
-# Transformer/IO/AIMS.py
+# Transformer/IO/_AIMS.py
 
 
 # -------
 # Imports
 # -------
 
+from Transformer.IO import _Common;
+from Transformer.Utilities import StructureTools;
+
 from Transformer.Structure import Structure;
 
-from Transformer.Utilities import StructureTools;
 
 
 # ---------
 # Functions
 # ---------
 
-def ReadAIMSGeometryFile(filePath):
+def ReadGeometryInFile(filePath, atomTypeNumberLookupTable = None):
     # Variables to collect.
 
     latticeVectors = [];
@@ -61,13 +63,15 @@ def ReadAIMSGeometryFile(filePath):
 
     atomPositions = StructureTools.CartesianToFractionalCoordinates(latticeVectors, atomPositions);
 
+    # Convert the atomic symbols to atom-type numbers.
+
+    atomTypeNumbers = _Common.AtomicSymbolsToAtomTypeNumbers(atomicSymbols, atomTypeNumberLookupTable = atomTypeNumberLookupTable);
+
     # Return a Structure object.
 
-    return Structure(
-        latticeVectors, atomPositions, atomicSymbols
-        );
+    return Structure(latticeVectors, atomPositions, atomTypeNumbers);
 
-def WriteAIMSGeometryFile(structure, filePath, atomicSymbolLookupTable = None):
+def WriteGeometryInFile(structure, filePath, atomicSymbolLookupTable = None):
     with open(filePath, 'w') as outputWriter:
         # Write the structure name as a comment.
 

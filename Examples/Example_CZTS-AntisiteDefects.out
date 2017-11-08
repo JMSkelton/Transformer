@@ -1,13 +1,19 @@
-AtomicSubstitutions(): Performing substitution 1 (Cu -> -1)
-AtomicSubstitutions(): Initial structure set contains 1 structure(s)
+AntisiteDefects: Post processing structure set 1.
+
+   Spacegroup    |   # Structures   |     # Unique    
+------------------------------------------------------
+82  I-4          |                1 |                1
+
+AtomicSubstitutions: Performing substitution 1 (Cu -> -1)
+AtomicSubstitutions: Initial structure set contains 1 structure(s)
 
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
 81  P-4          |               16 |                2
 
-AtomicSubstitutions(): Performing substitution 2 (Zn -> -2)
-AtomicSubstitutions(): Initial structure set contains 2 structure(s)
+AtomicSubstitutions: Performing substitution 2 (Zn -> -2)
+AtomicSubstitutions: Initial structure set contains 2 structure(s)
 
 
    Spacegroup    |   # Structures   |     # Unique    
@@ -16,12 +22,20 @@ AtomicSubstitutions(): Initial structure set contains 2 structure(s)
 3   P2           |               16 |                1
 1   P1           |               96 |                3
 
-AtomicSubstitutions(): Performing substitution 3 (Cu -> -1)
-AtomicSubstitutions(): Initial structure set contains 6 structure(s)
+AntisiteDefects: Post processing structure set 2.
+
+   Spacegroup    |   # Structures   |     # Unique    
+------------------------------------------------------
+81  P-4          |               16 |                2
+3   P2           |               16 |                1
+1   P1           |               96 |                3
+
+AtomicSubstitutions: Performing substitution 3 (Cu -> -1)
+AtomicSubstitutions: Initial structure set contains 6 structure(s)
 
 
-AtomicSubstitutions(): Substituted set contained 64 structure(s)
-AtomicSubstitutions(): Filtering/merging removed 30 structure(s)
+AtomicSubstitutions: Substituted set contained 64 structure(s)
+AtomicSubstitutions: Filtering/merging removed 30 structure(s)
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
@@ -29,12 +43,12 @@ AtomicSubstitutions(): Filtering/merging removed 30 structure(s)
 3   P2           |              160 |                5
 1   P1           |            1,728 |               27
 
-AtomicSubstitutions(): Performing substitution 4 (Zn -> -2)
-AtomicSubstitutions(): Initial structure set contains 34 structure(s)
+AtomicSubstitutions: Performing substitution 4 (Zn -> -2)
+AtomicSubstitutions: Initial structure set contains 34 structure(s)
 
 
-AtomicSubstitutions(): Substituted set contained 220 structure(s)
-AtomicSubstitutions(): Filtering/merging removed 98 structure(s)
+AtomicSubstitutions: Substituted set contained 220 structure(s)
+AtomicSubstitutions: Filtering/merging removed 98 structure(s)
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
@@ -43,12 +57,21 @@ AtomicSubstitutions(): Filtering/merging removed 98 structure(s)
 3   P2           |              928 |               17
 1   P1           |           11,968 |               95
 
-AtomicSubstitutions(): Performing substitution 5 (Cu -> -1)
-AtomicSubstitutions(): Initial structure set contains 122 structure(s)
+AntisiteDefects: Post processing structure set 3.
+
+   Spacegroup    |   # Structures   |     # Unique    
+------------------------------------------------------
+81  P-4          |               32 |                2
+4   P2_1         |              512 |                8
+3   P2           |              928 |               17
+1   P1           |           11,968 |               95
+
+AtomicSubstitutions: Performing substitution 5 (Cu -> -1)
+AtomicSubstitutions: Initial structure set contains 122 structure(s)
 
 
-AtomicSubstitutions(): Substituted set contained 1498 structure(s)
-AtomicSubstitutions(): Filtering/merging removed 986 structure(s)
+AtomicSubstitutions: Substituted set contained 1498 structure(s)
+AtomicSubstitutions: Filtering/merging removed 986 structure(s)
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
@@ -56,12 +79,12 @@ AtomicSubstitutions(): Filtering/merging removed 986 structure(s)
 3   P2           |            7,872 |               41
 1   P1           |          180,096 |              469
 
-AtomicSubstitutions(): Performing substitution 6 (Zn -> -2)
-AtomicSubstitutions(): Initial structure set contains 512 structure(s)
+AtomicSubstitutions: Performing substitution 6 (Zn -> -2)
+AtomicSubstitutions: Initial structure set contains 512 structure(s)
 
 
-AtomicSubstitutions(): Substituted set contained 2976 structure(s)
-AtomicSubstitutions(): Filtering/merging removed 1974 structure(s)
+AtomicSubstitutions: Substituted set contained 2976 structure(s)
+AtomicSubstitutions: Filtering/merging removed 1974 structure(s)
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
@@ -69,12 +92,20 @@ AtomicSubstitutions(): Filtering/merging removed 1974 structure(s)
 3   P2           |           23,616 |               41
 1   P1           |        1,104,768 |              959
 
-AtomicSubstitutions(): Performing substitution 7 (Cu -> -1)
-AtomicSubstitutions(): Initial structure set contains 1002 structure(s)
+AntisiteDefects: Post processing structure set 4.
+
+   Spacegroup    |   # Structures   |     # Unique    
+------------------------------------------------------
+81  P-4          |              576 |                2
+3   P2           |           23,616 |               41
+1   P1           |        1,104,768 |              959
+
+AtomicSubstitutions: Performing substitution 7 (Cu -> -1)
+AtomicSubstitutions: Initial structure set contains 1002 structure(s)
 
 
-AtomicSubstitutions(): Substituted set contained 12798 structure(s)
-AtomicSubstitutions(): Filtering/merging removed 9572 structure(s)
+AtomicSubstitutions: Substituted set contained 12798 structure(s)
+AtomicSubstitutions: Filtering/merging removed 9572 structure(s)
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
@@ -82,12 +113,12 @@ AtomicSubstitutions(): Filtering/merging removed 9572 structure(s)
 3   P2           |          175,104 |               76
 1   P1           |       14,496,768 |            3,146
 
-AtomicSubstitutions(): Performing substitution 8 (Zn -> -2)
-AtomicSubstitutions(): Initial structure set contains 3226 structure(s)
+AtomicSubstitutions: Performing substitution 8 (Zn -> -2)
+AtomicSubstitutions: Initial structure set contains 3226 structure(s)
 
 
-AtomicSubstitutions(): Substituted set contained 16018 structure(s)
-AtomicSubstitutions(): Filtering/merging removed 11930 structure(s)
+AtomicSubstitutions: Substituted set contained 16018 structure(s)
+AtomicSubstitutions: Filtering/merging removed 11930 structure(s)
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
@@ -97,7 +128,15 @@ AtomicSubstitutions(): Filtering/merging removed 11930 structure(s)
 3   P2           |        1,103,616 |              125
 1   P1           |       71,889,408 |            3,912
 
-AtomicSubstitutions(): All substitutions performed.
+AntisiteDefects: Post processing structure set 5.
+
+   Spacegroup    |   # Structures   |     # Unique    
+------------------------------------------------------
+81  P-4          |           29,952 |                8
+5   C2           |            4,608 |                2
+4   P2_1         |          354,816 |               41
+3   P2           |        1,103,616 |              125
+1   P1           |       71,889,408 |            3,912
 
   Substitution   |  # Structures   | sum(Degeneracy) |  Permutations  
 ----------------------------------------------------------------------
@@ -110,39 +149,4 @@ AtomicSubstitutions(): All substitutions performed.
 6   Zn   -> -2   |           1,002 |       1,128,960 |       1,128,960
 7   Cu   -> -1   |               - |               - |      14,676,480
 8   Zn   -> -2   |           4,088 |      73,382,400 |      73,382,400
-
-AntisiteDefects(): Post processing defect set 1.
-
-   Spacegroup    |   # Structures   |     # Unique    
-------------------------------------------------------
-81  P-4          |               16 |                2
-3   P2           |               16 |                1
-1   P1           |               96 |                3
-
-AntisiteDefects(): Post processing defect set 2.
-
-   Spacegroup    |   # Structures   |     # Unique    
-------------------------------------------------------
-81  P-4          |               32 |                2
-4   P2_1         |              512 |                8
-3   P2           |              928 |               17
-1   P1           |           11,968 |               95
-
-AntisiteDefects(): Post processing defect set 3.
-
-   Spacegroup    |   # Structures   |     # Unique    
-------------------------------------------------------
-81  P-4          |              576 |                2
-3   P2           |           23,616 |               41
-1   P1           |        1,104,768 |              959
-
-AntisiteDefects(): Post processing defect set 4.
-
-   Spacegroup    |   # Structures   |     # Unique    
-------------------------------------------------------
-81  P-4          |           29,952 |                8
-5   C2           |            4,608 |                2
-4   P2_1         |          354,816 |               41
-3   P2           |        1,103,616 |              125
-1   P1           |       71,889,408 |            3,912
 

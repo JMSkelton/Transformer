@@ -1,17 +1,17 @@
-AtomicSubstitutions(): Performing substitution 1 (S -> Se)
-AtomicSubstitutions(): Initial structure set contains 1 structure(s)
+AtomicSubstitutions: Performing substitution 1 (S -> Se)
+AtomicSubstitutions: Initial structure set contains 1 structure(s)
 
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
 6   Pm           |               16 |                1
 
-AtomicSubstitutions(): Performing substitution 2 (S -> Se)
-AtomicSubstitutions(): Initial structure set contains 1 structure(s)
+AtomicSubstitutions: Performing substitution 2 (S -> Se)
+AtomicSubstitutions: Initial structure set contains 1 structure(s)
 
 
-AtomicSubstitutions(): Substituted set contained 11 structure(s)
-AtomicSubstitutions(): Filtering/merging removed 1 structure(s)
+AtomicSubstitutions: Substituted set contained 11 structure(s)
+AtomicSubstitutions: Filtering/merging removed 1 structure(s)
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
@@ -22,24 +22,24 @@ AtomicSubstitutions(): Filtering/merging removed 1 structure(s)
 2   P-1          |               64 |                2
 1   P1           |               64 |                1
 
-AtomicSubstitutions(): Performing substitution 3 (S -> Se)
-AtomicSubstitutions(): Initial structure set contains 10 structure(s)
+AtomicSubstitutions: Performing substitution 3 (S -> Se)
+AtomicSubstitutions: Initial structure set contains 10 structure(s)
 
 
-AtomicSubstitutions(): Substituted set contained 65 structure(s)
-AtomicSubstitutions(): Filtering/merging removed 42 structure(s)
+AtomicSubstitutions: Substituted set contained 65 structure(s)
+AtomicSubstitutions: Filtering/merging removed 42 structure(s)
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
 6   Pm           |            1,056 |               11
 1   P1           |            2,304 |               12
 
-AtomicSubstitutions(): Performing substitution 4 (S -> Se)
-AtomicSubstitutions(): Initial structure set contains 23 structure(s)
+AtomicSubstitutions: Performing substitution 4 (S -> Se)
+AtomicSubstitutions: Initial structure set contains 23 structure(s)
 
 
-AtomicSubstitutions(): Substituted set contained 259 structure(s)
-AtomicSubstitutions(): Filtering/merging removed 174 structure(s)
+AtomicSubstitutions: Substituted set contained 259 structure(s)
+AtomicSubstitutions: Filtering/merging removed 174 structure(s)
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
@@ -53,24 +53,24 @@ AtomicSubstitutions(): Filtering/merging removed 174 structure(s)
 2   P-1          |            1,920 |                6
 1   P1           |           29,184 |               38
 
-AtomicSubstitutions(): Performing substitution 5 (S -> Se)
-AtomicSubstitutions(): Initial structure set contains 85 structure(s)
+AtomicSubstitutions: Performing substitution 5 (S -> Se)
+AtomicSubstitutions: Initial structure set contains 85 structure(s)
 
 
-AtomicSubstitutions(): Substituted set contained 745 structure(s)
-AtomicSubstitutions(): Filtering/merging removed 588 structure(s)
+AtomicSubstitutions: Substituted set contained 745 structure(s)
+AtomicSubstitutions: Filtering/merging removed 588 structure(s)
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
 6   Pm           |           78,720 |               41
 1   P1           |          445,440 |              116
 
-AtomicSubstitutions(): Performing substitution 6 (S -> Se)
-AtomicSubstitutions(): Initial structure set contains 157 structure(s)
+AtomicSubstitutions: Performing substitution 6 (S -> Se)
+AtomicSubstitutions: Initial structure set contains 157 structure(s)
 
 
-AtomicSubstitutions(): Substituted set contained 1603 structure(s)
-AtomicSubstitutions(): Filtering/merging removed 1293 structure(s)
+AtomicSubstitutions: Substituted set contained 1603 structure(s)
+AtomicSubstitutions: Filtering/merging removed 1293 structure(s)
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
@@ -83,24 +83,24 @@ AtomicSubstitutions(): Filtering/merging removed 1293 structure(s)
 2   P-1          |          161,280 |               14
 1   P1           |        4,723,200 |              207
 
-AtomicSubstitutions(): Performing substitution 7 (S -> Se)
-AtomicSubstitutions(): Initial structure set contains 310 structure(s)
+AtomicSubstitutions: Performing substitution 7 (S -> Se)
+AtomicSubstitutions: Initial structure set contains 310 structure(s)
 
 
-AtomicSubstitutions(): Substituted set contained 2641 structure(s)
-AtomicSubstitutions(): Filtering/merging removed 2246 structure(s)
+AtomicSubstitutions: Substituted set contained 2641 structure(s)
+AtomicSubstitutions: Filtering/merging removed 2246 structure(s)
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
 6   Pm           |        6,048,000 |               75
 1   P1           |       51,609,600 |              320
 
-AtomicSubstitutions(): Performing substitution 8 (S -> Se)
-AtomicSubstitutions(): Initial structure set contains 395 structure(s)
+AtomicSubstitutions: Performing substitution 8 (S -> Se)
+AtomicSubstitutions: Initial structure set contains 395 structure(s)
 
 
-AtomicSubstitutions(): Substituted set contained 3379 structure(s)
-AtomicSubstitutions(): Filtering/merging removed 2897 structure(s)
+AtomicSubstitutions: Substituted set contained 3379 structure(s)
+AtomicSubstitutions: Filtering/merging removed 2897 structure(s)
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
@@ -118,11 +118,18 @@ AtomicSubstitutions(): Filtering/merging removed 2897 structure(s)
 2   P-1          |        9,031,680 |               14
 1   P1           |      445,132,800 |              347
 
-AtomicSubstitutions(): All substitutions performed.
+SolidSolution: Inverting substitution set 7 -> 9
+SolidSolution: Inverting substitution set 6 -> 10
+SolidSolution: Inverting substitution set 5 -> 11
+SolidSolution: Inverting substitution set 4 -> 12
+SolidSolution: Inverting substitution set 3 -> 13
+SolidSolution: Inverting substitution set 2 -> 14
+SolidSolution: Inverting substitution set 1 -> 15
+SolidSolution: Inverting substitution set 0 -> 16
 
   Substitution   |  # Structures   | sum(Degeneracy) |  Permutations  
 ----------------------------------------------------------------------
-0   None         |               1 |               1 |               1
+0   S    -> Se   |               1 |               1 |               1
 1   S    -> Se   |               1 |              16 |              16
 2   S    -> Se   |              10 |             240 |             240
 3   S    -> Se   |              23 |           3,360 |           3,360
@@ -131,33 +138,12 @@ AtomicSubstitutions(): All substitutions performed.
 6   S    -> Se   |             310 |       5,765,760 |       5,765,760
 7   S    -> Se   |             395 |      57,657,600 |      57,657,600
 8   S    -> Se   |             482 |     518,918,400 |     518,918,400
-
-SolidSolution(): Inverting substitution set 7 -> 9
-SolidSolution(): Inverting substitution set 6 -> 10
-SolidSolution(): Inverting substitution set 5 -> 11
-SolidSolution(): Inverting substitution set 4 -> 12
-SolidSolution(): Inverting substitution set 3 -> 13
-SolidSolution(): Inverting substitution set 2 -> 14
-SolidSolution(): Inverting substitution set 1 -> 15
-SolidSolution(): Inverting substitution set 0 -> 16
-
-  Substitution   |    # Structures    |  sum(Degeneracy)   |    Permutations   
--------------------------------------------------------------------------------
-0   None         |                  1 |                  1 |                  1
-1   S    -> Se   |                  1 |                 16 |                 16
-2   S    -> Se   |                 10 |                240 |                240
-3   S    -> Se   |                 23 |              3,360 |              3,360
-4   S    -> Se   |                 85 |             43,680 |             43,680
-5   S    -> Se   |                157 |            524,160 |            524,160
-6   S    -> Se   |                310 |          5,765,760 |          5,765,760
-7   S    -> Se   |                395 |         57,657,600 |         57,657,600
-8   S    -> Se   |                482 |        518,918,400 |        518,918,400
-9   S    -> Se   |                395 |         57,657,600 |      4,151,347,200
-10  S    -> Se   |                310 |          5,765,760 |     29,059,430,400
-11  S    -> Se   |                157 |            524,160 |    174,356,582,400
-12  S    -> Se   |                 85 |             43,680 |    871,782,912,000
-13  S    -> Se   |                 23 |              3,360 |  3,487,131,648,000
-14  S    -> Se   |                 10 |                240 | 10,461,394,944,000
-15  S    -> Se   |                  1 |                 16 | 20,922,789,888,000
-16  S    -> Se   |                  1 |                  1 | 20,922,789,888,000
+9   S    -> Se   |             395 |      57,657,600 |      57,657,600
+10  S    -> Se   |             310 |       5,765,760 |       5,765,760
+11  S    -> Se   |             157 |         524,160 |         524,160
+12  S    -> Se   |              85 |          43,680 |          43,680
+13  S    -> Se   |              23 |           3,360 |           3,360
+14  S    -> Se   |              10 |             240 |             240
+15  S    -> Se   |               1 |              16 |              16
+16  S    -> Se   |               1 |               1 |               1
 

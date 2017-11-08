@@ -1,6 +1,13 @@
 # Transformer/Structure.py
 
 
+# ----------------
+# Module Docstring
+# ----------------
+
+""" Contains the primary Structure class used to represent crystal structures. """
+
+
 # -------
 # Imports
 # -------
@@ -27,59 +34,80 @@ from Transformer import Constants;
 # ---------------
 
 class Structure:
+    """
+    Lightweight class for storing crystal structures.
+
+    Internally, the structure data is stored in NumPy arrays to keep a low memory footprint.
+    The atom-type numbers and positions are stored in a structured array and kept in sort order, allowing for efficient comparison between structures.
+
+    Class methods expose a core set of symmetry routines and an extensive set of utility functions.
+
+    Properties that are non-trivial to compute or are likely to be accessed repeatedly are automatically cached for performance.
+
+    Usage notes:
+        - Use the Get*/Set* methods to access and update the structure data; modifying the internal arrays directly may cause other Transformer routines to do unexpected things!
+        - Most derived properties (e.g. symmetry properties) are returned "as is", and need to be copied before modification.
+    """
+
     # -----------
     # Constructor
     # -----------
 
     def __init__(self, latticeVectors, atomPositions, atomTypes, name = None):
-        # Validate and store the lattice vectors.
+        """
+        Class constructor.
 
-        self.SetLatticeVectors(latticeVectors);
+        Arguments:
+            latticeVectors -- must be convertible to a 3x3 NumPy matrix.
+            atomPositions --must be convertible to an Nx3 NumPy matrix.
+            atomTypes -- may be integer atom-type numbers or atomic symbols.
 
-        # Obtain a list of atom-type numbers.
+        Keyword arguments:
+            name -- a name for the structure.
+        """
+
+        if len(atomTypes) != len(atomPositions):
+            raise Exception("Error: The lengths of atomPositions and atomTypes are not consistent.");
+
+        # Convert atom types to atom-type numbers.
 
         atomTypeNumbers = [
             AtomTypeToAtomTypeNumber(atomType) for atomType in atomTypes
             ];
 
-        # Check that the length of atomTypeNumbers/atomicSymbols is consistent with that of atomPositions.
+        for typeNumber in atomTypeNumbers:
+            if typeNumber == None:
+                raise Exception("Error: One or more atom types could not be converted to atom-type numbers.");
 
-        if len(atomTypeNumbers) != len(atomPositions):
-            raise Exception("Error: The lengths of atomTypeNumbers/atomicSymbols and atomPositions are not consistent.");
+        # The atom data is stored in a NumPy structured array.
+        # We also create typed views into the data for ease of manipulation.
 
         numAtoms = len(atomTypeNumbers);
 
-        # The atom data is stored in a NumPy structured array, which enables NumPy sorting.
-
         atomData = np.zeros(numAtoms, dtype = Structure._AtomDataType);
 
-        # Creating views to the atom-type numbers and atom positions allows easier manipulation of the data.
-
         atomTypeNumbersView = atomData.view(dtype = np.int64).reshape((numAtoms, 4))[:, 0];
-
-        atomPositionsView = atomData.view(dtype = np.float64).reshape((numAtoms, 4))[:, 1:];
-
-        # Set the data, clamp the atom positions to the range [0, 1] and sort.
-
         atomTypeNumbersView[:] = atomTypeNumbers;
 
+        atomPositionsView = atomData.view(dtype = np.float64).reshape((numAtoms, 4))[:, 1:];
         atomPositionsView[:] = atomPositions;
+
+        # Clamp (fractional) atom positions to the range [0, 1].
+
         atomPositionsView[:] %= 1.0;
 
         atomData.sort();
 
-        # Store the atom data and views.
+        # Set fields.
+
+        self.SetLatticeVectors(latticeVectors);
 
         self._atomData = atomData;
 
         self._atomTypeNumbersView = atomTypeNumbersView;
         self._atomPositionsView = atomPositionsView;
 
-        # Store the name.
-
         self._name = name;
-
-        # Initialise the fields used to store lazily-initialised properties.
 
         self._ResetLazyPropertyFields();
 
@@ -88,7 +116,7 @@ class Structure:
     # ---------------
 
     def _ResetLazyPropertyFields(self):
-        # Reset fields used for lazy initialisation of some quantities that are non-trivial to compute.
+        """ Resets internal fields used for caching/lazy initialisation of non-trivial properties. """
 
         self._symmetryAnalysisTolerance = None;
 
@@ -98,12 +126,12 @@ class Structure:
 
         self._pAtomPositionsCartesian = None;
 
-        self._pAtomicSymbolsCounts = None;
-        self._pAtomIndexRanges = None;
         self._pChemicalFormula = None;
         self._pNeighbourTable = None;
 
-    def _PerformSymmetryAnalysis(self, tolerance = None):
+    def _PerformSymmetryAnalysis(self, tolerance):
+        """ Performs a symmetry analysis using spglib and the supplied tolerance. """
+
         # If no symmetry tolerance is provided, use the default value.
 
         if tolerance == None:
@@ -112,25 +140,19 @@ class Structure:
         # Only perform the symmetry analysis if it hasn't been done yet (_symmetryAnalysisTolerance == None) or if the tolerance has changed.
 
         if tolerance != self._symmetryAnalysisTolerance:
-            # Call the get_spacegroup() routine from spglib.
+            # Call the get_symmetry_dataset() routine from spglib.
 
             result = spg.get_symmetry_dataset(
                 (self._latticeVectors, self._atomPositionsView, self._atomTypeNumbersView),
                 symprec = tolerance
                 );
 
-            # If the symmetry search fails, get_symmetry_dataset() returns None.
-
             if result == None:
                 raise Exception("Error: spglib get_symmetry_dataset() routine returned None.");
 
-            # Stpre the spacegroup number and international symbol..
-
-            self._pSpacegroup = (result['number'], result['international']);
-
-            # spglib returns symmetry operations in the form of a rotation matrix plus a translation.
+            # spglib returns symmetry operations in rotation + translation format.
             # The translation vectors sometimes show numerical noise, which can sometimes cause structures related by symmetry to be detected as inequivalent.
-            # We therefore round them the translations based on the specified tolerance and clamp to the range [0, 1].
+            # We therefore round them based on the set tolerance and clamp to the range [0, 1].
 
             roundDecimals = -1 * int(
                 math.floor(math.log10(tolerance))
@@ -141,18 +163,15 @@ class Structure:
                     for translation in result['translations']
                 ];
 
-            # Store the symmetry operations as a list of (rotation, translation) tuples.
-
+            self._pSpacegroup = (result['number'], result['international']);
             self._pSymmetryOperations = [item for item in zip(result['rotations'], translations)];
-
-            # Get the indices of the unique atoms.
-
-            uniqueAtomIndices = np.unique(result['equivalent_atoms']);
 
             # Store the unique atom indices along with the number of equivalent sites.
 
+            uniqueAtomIndices = np.unique(result['equivalent_atoms']);
+
             self._pUniqueAtomIndices = (
-                uniqueAtomIndices,
+                [index for index in uniqueAtomIndices],
                 [len(np.where(result['equivalent_atoms'] == index)[0]) for index in uniqueAtomIndices]
                 );
 
@@ -160,46 +179,37 @@ class Structure:
 
             self._symmetryAnalysisTolerance = tolerance;
 
-    # -----------------------
-    # Property Getter Methods
-    # -----------------------
+    # ----------------
+    # Property Getters
+    # ----------------
 
     def GetAtomCount(self):
+        """ Return the number of atoms in the structure. """
+
         return len(self._atomData);
 
-    def GetName(self):
-        name = self._name;
-
-        if name == None or name == "":
-            # If name empty, return a chemical formula if available, or else return the default value.
-
-            if self._pChemicalFormula != None:
-                # We don't know a priori whether the atom-type numbers map to elements, or whether these are arbitrarily set.
-                # However, if the user has requested a chemical formula without supplying a symbol lookup table, then we can assume this is the case.
-
-                return self._pChemicalFormula;
-            else:
-                return Structure.DefaultName;
-        else:
-            return name;
-
     def GetLatticeVectors(self):
-        # Return the lattice vectors as a list of 1D NumPy arrays.
+        """ Return a copy of the lattice vectors as a list of NumPy vectors. """
 
         return [np.copy(row) for row in self._latticeVectors[:]];
 
     def GetAtomTypeNumbers(self):
-        # Return the atom-type numbers as a list of integers.
+        """ Return a copy of the atom-type numbers. """
 
         return [atomTypeNumber for atomTypeNumber in self._atomTypeNumbersView[:]];
 
     def GetAtomPositions(self):
-        # Return the atom positions as a list of 1D NumPy arrays.
+        """ Return a copy of the atom positions as a list of NumPy vectors. """
 
         return [np.copy(row) for row in self._atomPositionsView[:]];
 
     def GetLatticeVectorsNumPy(self, copy = True):
-        # Return the lattice vectors as a 3x3 NumPy array.
+        """
+        Return the internal 3x3 NumPy matrix representation of the lattice vectors.
+
+        Keyword arguments:
+            copy -- if True (default), return a copy of the data.
+        """
 
         if copy:
             return np.copy(self._latticeVectors);
@@ -207,7 +217,12 @@ class Structure:
             return self._latticeVectors;
 
     def GetAtomTypeNumbersNumPy(self, copy = True):
-        # Return the atom-type numbers as a 1D NumPy array or the internal _atomTypeNumbersView field.
+        """
+        Return the internal NumPy view of the atom-type numbers.
+
+        Keyword arguments:
+            copy -- if True (default), return a copy of the data.
+        """
 
         if copy:
             return np.copy(self._atomTypeNumbersView);
@@ -215,7 +230,12 @@ class Structure:
             return self._atomTypeNumbersView;
 
     def GetAtomPositionsNumPy(self, copy = True):
-        # Return the atom positions as an Nx3 NumPy array or the internal _atomPositionsView field.
+        """
+        Return the internal NumPy view of the atom positions.
+
+        Keyword arguments:
+            copy -- if True (default), return a copy of the data.
+        """
 
         if copy:
             return np.copy(self._atomPositionsView);
@@ -223,22 +243,47 @@ class Structure:
             return self._atomPositionsView;
 
     def GetAtomDataNumPy(self, copy = True):
-        # Return the internal _atomData field.
+        """
+        Return the internal NumPy representation of the atom data.
+        This is a 1D structured array of type Structure._AtomDataType.
+
+        Keyword arguments:
+            copy -- if True (default), return a copy of the data.
+        """
 
         if copy:
             return np.copy(self._atomData);
         else:
             return self._atomData;
 
-    # -----------------------
-    # Property Setter Methods
-    # -----------------------
+    def GetName(self):
+        """ Return the structure name, if set; otherwise, returns a chemical formula. """
+
+        name = self._name;
+
+        if name != None and name != "":
+            return name;
+        else:
+            # If name is empty, compute and return a chemical formula.
+
+            return self.GetChemicalFormula();
+
+    # ----------------
+    # Property Setters
+    # ----------------
 
     def SetName(self, name):
+        """ Set a name for the structure. """
+
         self._name = name;
 
     def SetLatticeVectors(self, latticeVectors):
-        # Convert the lattice vectors to a NumPy array, check the shape, and store.
+        """
+        Set the lattice vectors.
+
+        Arguments:
+            latticeVectors -- must be convertible to a 3x3 NumPy matrix.
+        """
 
         latticeVectors = np.array(latticeVectors, dtype = np.float64);
 
@@ -249,101 +294,225 @@ class Structure:
 
         self._latticeVectors = latticeVectors;
 
-    def SetAtom(self, index, atomType, atomPosition = None):
-        # Sanity check.
+    def SetAtoms(self, indexOrIndices, atomTypes, atomPositions):
+        """
+        Set type(s) and/or position(s) of selected atoms.
+
+        Arguments:
+            indexOrIndices -- an index or list of indices of atoms to update.
+            atomTypes -- an atom type or list of atom types to update for the selected atoms.
+            atomPositions -- a NumPy vector or list of NumPy vectors to update for the selected atoms.
+
+        Notes:
+            If indexOrIndices is a list, atomTypes and atomPositions, if supplied, must also be lists.
+            Atom types may be specified by symbols or integer atom-type numbers.
+            If an atom type and/or position is set to None, its value is left unchanged.
+            Since updating the same atom twice is likely a mistake, doing so raises an error.
+        """
+
+        indices = None;
+
+        if isinstance(indexOrIndices, list):
+            indices = indexOrIndices;
+
+            # If a list of indices is supplied, it should not contian duplicate indices.
+
+            indicesCheck = set();
+
+            for index in indices:
+                if index in indicesCheck:
+                    raise Exception("Error: If a list of indices is supplied, it cannot contain duplicate indices.");
+                else:
+                    indicesCheck.add(index);
+
+            # If a list of indices is supplied, atomTypes and atomPositions, if supplied, must also be lists.
+
+            if atomTypes != None:
+                if not (isinstance(atomTypes, list) and len(atomTypes) == len(indices)):
+                    raise Exception("Errror: If a list of indices is supplied, atomTypes, if supplied, must be a list and must contain the same number of entries.");
+            else:
+                atomTypes = [None] * len(indices);
+
+            if atomPositions != None:
+                if not (isinstance(atomPositions, list) and len(atomPositions) == len(indices)):
+                    raise Exception("Error: If a list of indices is supplied, atomPositions, if supplied, must be a list and must contain the same number of entries.");
+            else:
+                atomPositions = [None] * len(indices);
+
+        else:
+            # If a single index is supplied, assume atomTypes and atomPositions are scalars and convert everything to lists.
+
+            indices = [indexOrIndices];
+
+            atomTypes = [atomTypes];
+            atomPositions = [atomPositions];
 
         numAtoms = len(self._atomData);
 
-        if index >= numAtoms:
-            raise Exception("Error: Index {0} is out of range for number of atoms {1}.".format(index, numAtoms));
+        for index in indices:
+            if index >= numAtoms:
+                raise Exception("Error: Index {0} is out of range for number of atoms {1}.".format(index, numAtoms));
 
-        # Convert atomType to an atom-type number.
+        # Convert atom types to atom-type numbers.
 
-        atomTypeNumber = AtomTypeToAtomTypeNumber(atomType);
+        for i, atomType in enumerate(atomTypes):
+            typeNumber = AtomTypeToAtomTypeNumber(atomType);
 
-        if atomTypeNumber != None:
-            # Substitute atom.
+            if typeNumber == None:
+                raise Exception("Error: Unable to convert atom-type '{0}' to an atom-type number.".format(atomType));
 
-            self._atomTypeNumbersView[index] = atomTypeNumber;
+            atomTypes[i] = typeNumber;
 
-            if atomPosition != None:
-                self._atomPositionsView[index] = [x % 1.0 for x in atomPosition];
+        for i, index in enumerate(indices):
+            # Set atoms.
 
-            # Resort the atoms.
+            if atomTypes != None and atomTypes[i] != None:
+                # Substitute atom.
 
-            self._atomData.sort();
-        else:
-            if atomPosition != None:
-                warnings.warn("When atomType is set to None, the atom is removed and its position is not updated.", UserWarning);
+                self._atomTypeNumbersView[index] = atomTypes[i];
 
-            # Delete atom.
+            if atomPositions != None and atomPositions[i] != None:
+                # Update atom position.
 
-            numAtomsNew = numAtoms - 1;
+                self._atomPositionsView[index] = [x % 1.0 for x in atomPositions[i]];
 
-            atomDataNew = np.zeros(numAtomsNew, dtype = Structure._AtomDataType);
+        # Resort the atoms and reset cached property fields.
 
-            atomDataNew[:index] = self._atomData[:index];
-            atomDataNew[index:] = self._atomData[index + 1:];
-
-            # Update _atomData field and update views.
-
-            self._atomData = atomDataNew;
-
-            self._atomTypeNumbersView = atomDataNew.view(dtype = np.int64).reshape((numAtomsNew, 4))[:, 0];
-            self._atomPositionsView = atomDataNew.view(dtype = np.float64).reshape((numAtomsNew, 4))[:, 1:];
-
-        # Invalidate lazily-initialised property fields.
+        self._atomData.sort();
 
         self._ResetLazyPropertyFields();
 
-    def SwapAtoms(self, atomType1, atomType2):
-        atomTypeNumber1, atomTypeNumber2 = AtomTypeToAtomTypeNumber(atomType1), AtomTypeToAtomTypeNumber(atomType2);
+    def SwapAtoms(self, atomTypes1, atomTypes2):
+        """
+        Swaps all atoms of type(s) specified in atomTypes1 for the corresponding type(s) in atomTypes2.
 
-        if atomType1 == None:
-            raise Exception("Error: atomType1 cannot be None.");
+        Arguments:
+            atomTypes1 -- an atom type or list of atom types to swap.
+            atomTypes2 -- an atom type or list of atom types to swap to.
+
+        Notes:
+            If atomTypes1 is a list, atomTypes2 must also be a list.
+            Updating the atoms is performed in one go, so it is possible to swap two types of atoms with this method, i.e. atomTypes1 = [a, b] and atomTypes2 = [b, a] will work as expected.
+        """
+
+        if atomTypes1 == None:
+            raise Exception("Error: atomTypes1 cannot be None.");
+
+        if atomTypes2 == None:
+            raise Exception("Error: atomTypes2 cannot be None.")
+
+        # Convert atom types to atom-type numbers.
+
+        atomTypeNumbers1, atomTypeNumbers2 = [], [];
+
+        if isinstance(atomTypes1, list):
+            atomTypeNumbers1 = [
+                AtomTypeToAtomTypeNumber(atomType) for atomType in atomTypes1
+                ];
+        else:
+            atomTypeNumbers1 = [AtomTypeToAtomTypeNumber(atomTypes1)];
+
+        if isinstance(atomTypes2, list):
+            atomTypeNumbers2 = [
+                AtomTypeToAtomTypeNumber(atomType) for atomType in atomTypes2
+                ];
+        else:
+            atomTypeNumbers2 = [AtomTypeToAtomTypeNumber(atomTypes2)];
+
+        if len(atomTypeNumbers1) != len(atomTypeNumbers2):
+            raise Exception("Error: atomTypes1 and atomTypes2 must contain the same number of atom types.");
+
+        # Get indices.
 
         atomTypeNumbers = self._atomTypeNumbersView;
 
-        if atomTypeNumber1 not in atomTypeNumbers:
-            raise Exception("Error: atomType1 was not found in the structure.");
+        indices, atomTypes = [], [];
 
-        if atomTypeNumber2 != None:
-            # Using Boolean indexing prompts a copy, so we need to update the atom-type numbers in a loop.
+        for typeNumber1, typeNumber2 in zip(atomTypeNumbers1, atomTypeNumbers2):
+            # Both type numbers should not be None, and the first type number should be present in the structure.
 
-            for index in np.argwhere(atomTypeNumbers == atomTypeNumber1):
-                atomTypeNumbers[index] = atomTypeNumber2;
+            if typeNumber1 == None or typeNumber2 == None:
+                raise Exception("Error: One or more atom types were not recognised or were set to None.");
 
-            # Updating the atom-type numbers may require a re-sort.
+            swapIndices, = np.where(atomTypeNumbers == typeNumber1);
 
-            self._atomData.sort();
+            # Check there are atoms of typeNumber1 in the structure.
+
+            if len(swapIndices) > 0:
+                indices.extend(swapIndices);
+
+                atomTypes = atomTypes + [typeNumber2] * len(swapIndices);
+
+        # Pass to SetAtoms() method.
+
+        self.SetAtoms(indices, atomTypes, None);
+
+    def DeleteAtoms(self, indexOrIndices):
+        """
+        Delete selected atom(s).
+
+        Arguments:
+            indexOrIndices -- an index or list of indices of atoms to delete.
+        """
+
+        if indexOrIndices == None:
+            raise Exception("Error: indexOrIndices cannot be None.");
+
+        indices = None;
+
+        if isinstance(indexOrIndices, list):
+            indices = indexOrIndices;
         else:
+            indices = [indexOrIndices];
+
+        deleteIndices = set(indices);
+
+        if len(deleteIndices) > 0:
             atomData = self._atomData;
 
-            atomDataNew = atomData[atomTypeNumbers != atomTypeNumber1];
+            numAtoms = len(atomData);
+            numAtomsNew = numAtoms - len(deleteIndices);
 
-            numAtomsNew = len(atomDataNew);
+            # Build a new array of atom data with the marked atoms removed, and update the internal fields
 
-            # Since boolean indexing counts as "fancy indexing", we need to regenerate the type-number and positions views.
+            atomDataNew = np.zeros(
+                numAtomsNew, dtype = Structure._AtomDataType
+                );
+
+            pointer = 0;
+
+            for i in range(0, numAtoms):
+                if i not in deleteIndices:
+                    atomDataNew[pointer] = atomData[i];
+                    pointer += 1;
 
             self._atomData = atomDataNew;
 
             self._atomTypeNumbersView = atomDataNew.view(dtype = np.int64).reshape((numAtomsNew, 4))[:, 0];
             self._atomPositionsView = atomDataNew.view(dtype = np.float64).reshape((numAtomsNew, 4))[:, 1:];
 
-    # ----------------
-    # Symmetry Methods
-    # ----------------
+    # --------
+    # Symmetry
+    # --------
 
     def GetSymmetryAnalysisTolerance(self):
-        if self._symmetryAnalysisTolerance == None:
-            # If a symmetry tolerance has not been set, return the default value.
-            # This is what would be used if the user called one of the Get* functions to obtain symmetry properties without specifying a tolerance.
+        """ Return the symmetry-analysis tolerance. """
+
+        if self._symmetryAnalysisTolerance != None:
+            return self._symmetryAnalysisTolerance;
+        else:
+            # If a symmetry tolerance has not been set, return the default value that would be used when getting symmetry properties.
 
             return Structure._DefaultSymmetryAnalysisTolerance;
-        else:
-            return self._symmetryAnalysisTolerance;
 
     def GetSpacegroup(self, tolerance = None):
+        """
+        Get the spacegroup as a (spacegroup_number, spacegroup_symbol) tuple.
+
+        Keyword arguments:
+            tolerance -- tolerance for performing the symmetry analysis.
+        """
+
         # Perform the symmetry analysis if required.
 
         self._PerformSymmetryAnalysis(tolerance = tolerance);
@@ -351,6 +520,17 @@ class Structure:
         return self._pSpacegroup;
 
     def GetSymmetryOperations(self, tolerance = None):
+        """
+        Get the symmetry operations as a list of (rotation, translation) tuples.
+
+        Keyword arguments:
+            tolerance -- tolerance for performing the symmetry analysis.
+
+        Return value:
+            A list of (rotation, translation) tuples.
+            Rotations are stored as 3x3 NumPy integer matrices, and translations as NumPy vectors.
+        """
+
         # Perform the symmetry analysis if required.
 
         self._PerformSymmetryAnalysis(tolerance = tolerance);
@@ -358,88 +538,74 @@ class Structure:
         return self._pSymmetryOperations;
 
     def GetUniqueAtomIndices(self, tolerance = None):
+        """
+        Get a list of representitive unique atom indices and the numbers of equivalent sites.
+
+        Keyword arguments:
+            tolerance -- tolerance for performing the symmetry analysis.
+
+        Return value:
+            A tuple containing (representitive_indices, num_equivalent_sites) lists.
+        """
+
         # Perform the symmetry analysis if required.
 
         self._PerformSymmetryAnalysis(tolerance = tolerance);
 
         return self._pUniqueAtomIndices;
 
-    # ------------------
-    # Comparison Methods
-    # ------------------
+    # ----------
+    # Comparison
+    # ----------
 
-    def CompareLatticeVectors(self, structure, tolerance = None):
+    def CompareStructure(self, structure, tolerance = None):
+        """
+        Return True if structure has the same number of atoms, lattice vectors, atom-type numbers and positions.
+        Lattice vectors and positions are compared to within a set tolerance.
+
+        Keyword arguments:
+            tolerance -- tolerance for comparing lattice vectors and positions.
+        """
+
         # If no equivalence tolerance is supplied, use the default.
 
         if tolerance == None:
             tolerance = Structure.DefaultSymmetryEquivalenceTolerance;
 
-        return (np.abs(self._latticeVectors - structure.GetLatticeVectorsNumPy(copy = False)) <= tolerance).all();
+        # Fastest check: compare numbers of atoms.
 
-    def CompareAtomTypeNumbers(self, structure):
+        if len(self._atomData) != structure.GetAtomCount():
+            return False;
+
+        # Next fastest check: compare lattice vectors.
+
+        if not (np.abs(self._latticeVectors - structure.GetLatticeVectorsNumPy(copy = False)) <= tolerance).all():
+            return False;
+
+        # Next fastest check: compare atom-type numbers.
+
         atomTypeNumbers1 = self._atomTypeNumbersView;
         atomTypeNumbers2 = structure.GetAtomTypeNumbersNumPy(copy = False);
 
-        # First check that the number of atoms match.
-
-        if len(atomTypeNumbers1) != len(atomTypeNumbers2):
+        if not (atomTypeNumbers1 == atomTypeNumbers2).all():
             return False;
 
-        # If they do, perform an element-wise comparison.
-
-        return (atomTypeNumbers1 == atomTypeNumbers2).all();
-
-    def CompareAtomPositions(self, structure, tolerance = None):
-        # If no equivalence tolerance is supplied, use the default.
-
-        if tolerance == None:
-            tolerance = Structure.DefaultSymmetryEquivalenceTolerance;
+        # Slowest check: compare atom positions.
 
         atomPositions1 = self._atomPositionsView;
         atomPositions2 = structure.GetAtomPositionsNumPy(copy = False);
 
-        # First check that the number of atoms match.
-
-        if len(atomPositions1) != len(atomPositions2):
-            return False;
-
-        # If they do, perform an element-wise comparison using the tolerance.
-
         return (np.abs(atomPositions1 - atomPositions2) <= tolerance).all();
-
-    def CompareStructure(self, structure, tolerance = None):
-        # Fastest check: the lattice vectors are the same.
-
-        if not self.CompareLatticeVectors(structure, tolerance = tolerance):
-            return False;
-
-        # Next fastest check: compare the atom counts and atom-type numbers.
-
-        if not self.CompareAtomTypeNumbers(structure):
-            return False;
-
-        # Finally, compare the atom positions.
-
-        if not self.CompareAtomPositions(structure, tolerance = tolerance):
-            return False;
-
-        # All tests passed -> the structures are equivalent.
-
-        return True;
 
     # ---------------
     # Utility Methods
     # ---------------
 
     def GetAtomPositionsCartesian(self):
-        # Convert the atom positions to Cartesian coordinates and return as a list of NumPy arrays.
+        """ Return the atom positions in Cartesian coordinates as a list of NumPy vectors. """
 
         if self._pAtomPositionsCartesian == None:
-            # Load the lattice vectors.
-
             v1, v2, v3 = self._latticeVectors[:];
-
-            # Convert the atom positions to Cartesian coordinates.
 
             atomPositionsCartesian = [];
 
@@ -453,94 +619,97 @@ class Structure:
         return self._pAtomPositionsCartesian;
 
     def GetAtomTypeNumberPlaceholder(self):
-        # Return a negative atom-type number that isn't present among the atom-type numbers.
+        """ Return a negative unused atom-type number. """
 
         return min(0, np.min(self._atomTypeNumbersView)) - 1;
 
+    def GetAtomTypeNumbersCounts(self):
+        """ Return a tuple of (type_numbers, atom_counts) lists. """
+
+        # Since the atom-type numbers are maintained in sort order, this is a NumPy one-liner.
+
+        typeNumbers, atomCounts = np.unique(self._atomTypeNumbersView, return_counts = True);
+
+        # For consistency with other methods, convert to lists when returning.
+
+        return (list(typeNumbers), list(atomCounts));
+
     def GetAtomicSymbolsCounts(self, atomicSymbolLookupTable = None):
-        # If atomicSymbolLookupTable is not set and the internal _pAtomSymbolsCounts field has been initialised, we can simply return a copy of that.
+        """
+        Return a tuple of (atomic_symbols, atom_counts) lists.
 
-        if atomicSymbolLookupTable == None and self._pAtomicSymbolsCounts != None:
-            atomicSymbols, atomCounts = self._pAtomicSymbolsCounts;
+        Keyword arguments:
+            atomicSymbolLookupTable -- a dictionary mapping atom-type numbers to custom atomic symbols.
+        """
 
-            return (atomicSymbols[:], atomCounts[:]);
+        typeNumbers, atomCounts = self.GetAtomTypeNumbersCounts();
 
-        atomicSymbolsList = [];
+        # Convert the atom-type numbers to symbols.
 
-        # Translate each atom-type number into a symbol.
+        atomicSymbols = [];
 
-        for typeNumber in self.GetAtomTypeNumbers():
-            # If an atomic-symbol lookup table is provided, look for the atom-type number in that first.
-
+        for typeNumber in typeNumbers:
             if atomicSymbolLookupTable != None and typeNumber in atomicSymbolLookupTable:
-                atomicSymbolsList.append(atomicSymbolLookupTable[typeNumber]);
+                # If a lookup table is supplied by the user, search that first.
+
+                atomicSymbols.append(
+                    atomicSymbolLookupTable[typeNumber]
+                    );
             else:
                 # If not, try the periodic table in the Constants module.
 
                 atomicSymbol = Constants.AtomicNumberToSymbol(typeNumber);
 
                 if atomicSymbol != None:
-                    atomicSymbolsList.append(atomicSymbol);
+                    atomicSymbols.append(atomicSymbol);
                 else:
-                    # If all else fails, simply convert the atom-type number to a string.
+                    # If all else fails, convert the type number to a string.
 
-                    atomicSymbolsList.append(str(typeNumber));
+                    atomicSymbols.append(
+                        str(typeNumber)
+                        );
 
-        # Use the list of types to build a list of atomicSymbols and counts to add to the POSCAR header.
-
-        atomicSymbols, atomCounts = [atomicSymbolsList[0]], [1];
-
-        # The atom-type numbers returned by GetAtomTypeNumbers() should be sorted.
-
-        for i, atomicSymbol in enumerate(atomicSymbolsList[1:]):
-            if atomicSymbol == atomicSymbols[-1]:
-                atomCounts[-1] = atomCounts[-1] + 1;
-            else:
-                atomicSymbols.append(atomicSymbol);
-                atomCounts.append(1);
-
-        # To avoid having to store a reference to the symbol lookup table, copies of the atom types/counts are only stored internally if atomicSymbolLookupTable is not set.
-
-        if atomicSymbolLookupTable == None:
-            self._pAtomicSymbolsCounts = (atomicSymbols[:], atomCounts[:]);
+        # Return the list of symbols and counts.
 
         return (atomicSymbols, atomCounts);
 
     def GetAtomIndexRanges(self):
-        # Return a dictionary of tuples mapping atom-type numbers to atom-index ranges.
+        """ Return a dictionary of tuples mapping atom-type numbers to index ranges. """
 
-        if self._pAtomIndexRanges == None:
-            atomTypeNumbers = self._atomTypeNumbersView;
+        atomTypeNumbers = self._atomTypeNumbersView;
 
-            atomIndexRanges = { };
+        atomIndexRanges = { };
 
-            currentStartIndex, currentAtomTypeNumber = None, None;
+        currentStartIndex, currentAtomTypeNumber = None, None;
 
-            for i, atomTypeNumber in enumerate(atomTypeNumbers):
-                if atomTypeNumber != currentAtomTypeNumber:
-                    if currentAtomTypeNumber != None:
-                        atomIndexRanges[currentAtomTypeNumber] = (currentStartIndex, i);
+        for i, atomTypeNumber in enumerate(atomTypeNumbers):
+            if atomTypeNumber != currentAtomTypeNumber:
+                if currentAtomTypeNumber != None:
+                    atomIndexRanges[currentAtomTypeNumber] = (currentStartIndex, i);
 
-                    currentStartIndex = i;
-                    currentAtomTypeNumber = atomTypeNumber;
+                currentStartIndex = i;
+                currentAtomTypeNumber = atomTypeNumber;
 
-            atomIndexRanges[currentAtomTypeNumber] = (currentStartIndex, len(atomTypeNumbers));
+        atomIndexRanges[currentAtomTypeNumber] = (currentStartIndex, len(atomTypeNumbers));
 
-            self._pAtomIndexRanges = atomIndexRanges;
-
-        # Return a deep copy of _pAtomIndexRanges.
-
-        return { key : value for key, value in self._pAtomIndexRanges.items() };
+        return atomIndexRanges;
 
     def GetChemicalFormula(self, atomicSymbolLookupTable = None):
-        # If atomicSymbolLookupTable is not provided and the internal _pChemicalFormula has been initialised, return a copy of that.
+        """
+        Build a chemical formula from the atomic composition of the structure.
+
+        Keyword arguments:
+            atomicSymbolLookupTable -- a lookup table mapping atom-type numbers to atomic symbols.
+        """
+
+        # If a lookup table is not provided and _pChemicalFormula has been initialised, return a copy of that.
 
         if atomicSymbolLookupTable == None and self._pChemicalFormula != None:
             return self._pChemicalFormula;
 
-        atomicSymbols, atomCounts = self.GetAtomicSymbolsCounts(atomicSymbolLookupTable = atomicSymbolLookupTable);
-
         # Build the chemical formula.
+
+        atomicSymbols, atomCounts = self.GetAtomicSymbolsCounts(atomicSymbolLookupTable = atomicSymbolLookupTable);
 
         chemicalFormula = "";
 
@@ -552,7 +721,7 @@ class Structure:
 
             chemicalFormula += "{0}{1}".format(symbol, count);
 
-        # Only store a copy of the chemical formula if atomicSymbolLookupTable is not set.
+        # Only store a copy of the chemical formula if not using a lookup table.
 
         if atomicSymbolLookupTable == None:
             self._pChemicalFormula = chemicalFormula;
@@ -560,7 +729,7 @@ class Structure:
         return chemicalFormula;
 
     def GetNeighbourTable(self):
-        # Compute and return a table of interatomic distances (a neighbour table).
+        """ Compute and return an NxN NumPy matrix of interatomic distances (a neighbour table). """
 
         if self._pNeighbourTable == None:
             atomPositions = self._atomPositionsView;
@@ -581,11 +750,11 @@ class Structure:
             vectors[vectors < -0.5] += 1.0;
             vectors[vectors >= 0.5] -= 1.0;
 
-            # Convert fractional to Cartesian coordinates (NumPy one-liner...!).
+            # Convert fractional to Cartesian coordinates (a NumPy one-liner...!).
 
             vectors = np.einsum('ijk,kl', vectors, self._latticeVectors);
 
-            # Convert vectors to distances and store.
+            # Convert vectors to distances.
 
             self._pNeighbourTable = np.sqrt(np.sum(vectors ** 2, axis = 2));
 
@@ -596,16 +765,14 @@ class Structure:
     # --------------------
 
     def Clone(self):
-        # Given the way the constructor works, all the fields except the name (which is immutable anyway) should be deep copied.
+        """ Return a deep copy as a new Structure object. """
 
-        return Structure(
-            self._latticeVectors, self._atomPositionsView, self._atomTypeNumbersView, name = self._name
-            );
+        # Given the way the constructor works, all the fields except the name (which ought to be an immutable sttring anyway) should be deep copied.
 
-    def GetSupercell(self, supercellDim):
-        dimA, dimB, dimC = supercellDim;
+        return Structure(self._latticeVectors, self._atomPositionsView, self._atomTypeNumbersView, name = self._name);
 
-        # Sanity check.
+    def GetSupercell(self, dimA = 1, dimB = 1, dimC = 1):
+        """ Return a dimA x dimB x dimC supercell expansion as a new Structure object. """
 
         if dimA < 1 or dimB < 1 or dimC < 1:
             raise Exception("Error: Supercell dimensions must be >= 1.");
@@ -622,13 +789,13 @@ class Structure:
 
         numAtoms = len(atomTypeNumbers);
 
-        # Copy and rescale the atom positions.
+        # Copy and rescale atom positions.
 
         atomPositions = np.copy(self._atomPositionsView);
 
         atomPositions[:] /= np.array([dimA, dimB, dimC], dtype = np.float64);
 
-        # Create arrays for the new atom type-numbers and positions.
+        # Create arrays for new atom-type numbers and positions.
 
         newAtomTypeNumbers = np.zeros(
             dimA * dimB * dimC * numAtoms, dtype = np.int64
@@ -638,7 +805,7 @@ class Structure:
             (len(newAtomTypeNumbers), 3), dtype = np.float64
             );
 
-        # Generate the new atom positions and list of atomic numbers for the supercell.
+        # Generate new atom positions and atomic numbers.
 
         pointer = 0;
 
@@ -654,7 +821,7 @@ class Structure:
 
                     pointer += numAtoms;
 
-        # Generate the new lattice vectors.
+        # Generate new lattice vectors.
 
         newLatticeVectors = np.copy(self._latticeVectors);
 
@@ -662,22 +829,30 @@ class Structure:
         newLatticeVectors[1, :] *= dimB;
         newLatticeVectors[2, :] *= dimC;
 
-        # Generate a new name..
+        # If the current structure has a name, generate a new one by appending "(<dimA>x<dimB>x<dimC> SC)" to it.
 
         newName = None;
 
         if self._name != None:
-            # If the current structure has a name, generate a new one by appending "(<dimA>x<dimB>x<dimC> SC)" to it.
-
             newName = "{0} ({1}x{2}x{3} SC)".format(self._name, dimA, dimB, dimC);
 
-        # Return a new structure.
-
-        return Structure(
-            newLatticeVectors, newAtomPositions, newAtomTypeNumbers, name = newName
-            );
+        return Structure(newLatticeVectors, newAtomPositions, newAtomTypeNumbers, name = newName);
 
     def GetUniqueAtomicSubstitutions(self, atomType1, atomType2, tolerance = None):
+        """
+        Return lists of unique structures obtained by substituting atomType1 with atomType2 and associated degeneracies.
+        If atomType2 is None, vacancies will be created by deleting atoms of type atomType1.
+
+        Arguments:
+            atomType1, atomType2 -- may be atom-type numbers or atomic symbols.
+
+        Keyword arguments:
+            tolerance -- tolerance to be used for identifying equivalent atoms.
+
+        Return value:
+            A tuple of (structures, degeneracies) lists containing the unique structures and associated degeneracies.
+        """
+
         # Convert atomTypes to a atom-type numbers.
 
         atomTypeNumber1 = AtomTypeToAtomTypeNumber(atomType1);
@@ -695,15 +870,14 @@ class Structure:
 
         for atomIndex, siteDegeneracy in zip(uniqueAtomIndices, siteDegeneracies):
             if atomTypeNumbers[atomIndex] == atomTypeNumber1:
-                # Clone the current structure.
-
                 newStructure = self.Clone();
 
-                # Perform the substitution.
+                # If atomTypeNumber2 is None, delete the atom.
 
-                newStructure.SetAtom(atomIndex, atomTypeNumber2);
-
-                # Add the new structure and the site degeneracy to the lists.
+                if atomTypeNumber2 != None:
+                    newStructure.SetAtoms(atomIndex, atomTypeNumber2, None);
+                else:
+                    newStructure.DeleteAtoms(atomIndex);
 
                 structures.append(newStructure);
                 degeneracies.append(siteDegeneracy);
@@ -714,29 +888,27 @@ class Structure:
     # Static Fields
     # -------------
 
+    """ Structured data type used to store atom data internally. """
+
     _AtomDataType = [('TypeNumber', 'i8'), ('PosX', 'f8'), ('PosY', 'f8'), ('PosZ', 'f8')];
 
-    DefaultName = "Unknown Structure";
+    """ Default tolerance for symmetry analysis and structure comparisons. """
+
     DefaultSymmetryEquivalenceTolerance = 1.0e-5;
 
 
-# --------------
-# Static Methods
-# --------------
-
-# This should ideally be attached to the Structure class, but Python 2.x doesn't allow classes to have static methods.
+# ---------
+# Functions
+# ---------
 
 def AtomTypeToAtomTypeNumber(atomType):
-    if atomType != None:
-        # If atomType is not None, try and convert it to an atom-type number.
+    """ Convert atomType, which may be an integer or an atomic symbol, to an atom-type number. """
 
-        try:
-            # Assume atomType is (convertible to) an integer.
+    try:
+        # Assume atomType is (convertible to) an integer.
 
-            return int(atomType);
-        except ValueError:
-            # If that fails, assume atomType is an atomic symbol and lookup the corresponding atomic number.
+        return int(atomType);
+    except (TypeError, ValueError):
+        # If that fails, assume atomType is an atomic symbol and lookup the corresponding atomic number.
 
-            return Constants.SymbolToAtomicNumber(str(atomType));
-    else:
-        return None;
+        return Constants.SymbolToAtomicNumber(atomType);

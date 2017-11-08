@@ -9,22 +9,75 @@ import multiprocessing;
 import warnings;
 
 from Transformer import Structure;
+from Transformer import StructureSet;
 
 from Transformer.Framework import Core;
 
 from Transformer.Utilities import StructureTools;
 
 
-# ----------------
-# Antisite Defects
-# ----------------
+# -------------------------
+# Antisite Defects Function
+# -------------------------
 
 def AntisiteDefects(
-        structure, atom1, atom2, numDefects = None,
-        tolerance = None,
-        printProgressUpdate = True,
+    structure, atom1, atom2, numDefects = None,
+    printProgressUpdate = True,
+    **kwargs
+    ):
+
+    # Set up a generator function and yield the structure sets.
+
+    generator = _AntisiteDefectsIter(
+        structure, atom1, atom2, numDefects = numDefects,
+        printProgressUpdate = printProgressUpdate,
         **kwargs
-        ):
+        );
+
+    # Run the generator and capture the output.
+
+    substitutions, structureSets, permutationCounts = [], [], [];
+
+    for substitution, structureSet, permutationCount in generator:
+        substitutions.append(substitution);
+
+        if structureSet != None:
+            structureSets.append(structureSet);
+
+        permutationCounts.append(permutationCount);
+
+    # If required, print a final summary of the results.
+
+    if printProgressUpdate:
+        Core._PrintResultSummary(
+            substitutions, structureSets, permutationCounts, [i for i in range(0, len(substitutions), 2)]
+            );
+
+    return structureSets;
+
+def AntisiteDefectsIter(
+    structure, atom1, atom2, numDefects = None,
+    printProgressUpdate = True,
+    **kwargs
+    ):
+
+    # Set up a generator function and yield the structure sets.
+
+    generator = _AntisiteDefectsIter(
+        structure, atom1, atom2, numDefects = numDefects,
+        printProgressUpdate = printProgressUpdate,
+        **kwargs
+        );
+
+    for _, structureSet, _ in generator:
+        if structureSet != None:
+            yield structureSet;
+
+def _AntisiteDefectsIter(
+    structure, atom1, atom2, numDefects = None,
+    printProgressUpdate = True,
+    **kwargs
+    ):
 
     # Convert atom1 and atom2 to atom-type numbers.
 
@@ -70,61 +123,103 @@ def AntisiteDefects(
     placeholder1 = structure.GetAtomTypeNumberPlaceholder();
     placeholder2 = placeholder1 - 1;
 
-    # Collect structures with antisite defects by performing a sequence of substitutions where we swap atom1 -> 1 and atom2 -> 2.
+    # Build a generator for performing sequences of substitutions where we swap atom1 -> 1 and atom2 -> 2.
 
-    _, antisiteDefects = Core.AtomicSubstitutions(
-        structure, [(atom1, placeholder1), (atom2, placeholder2)] * numDefects,
-        storeIntermediate = [i for i in range(0, 2 * numDefects + 1, 2)], tolerance = tolerance,
+    generator = Core._AtomicSubstitutionsIter(
+        structure, [[(atom1, placeholder1), (atom2, placeholder2)]] * numDefects,
         printProgressUpdate = printProgressUpdate,
         **kwargs
         );
 
-    # Modify the substituted structures in the result set to swap the placeholders for 1 -> atom2 and 2 -> atom1.
+    # Run the generator.
 
-    for i, spacegroupGroups in enumerate(antisiteDefects[1:]):
-        if printProgressUpdate:
-            print("AntisiteDefects(): Post processing defect set {0}.".format(i + 1));
-            print("");
+    counter = 0;
 
-        # Merge the structures and degeneracies in the spacegroup groups into a "flat" lists.
+    for substitution, structureSet, permutationCount in generator:
+        # For each structure set returned, modify the substituted structures to swap the placeholders for 1 -> atom2 and 2 -> atom1.
 
-        structuresFlat, degeneraciesFlat = [], [];
+        if structureSet != None:
+            if printProgressUpdate:
+                print("AntisiteDefects: Post processing structure set {0}.".format(counter + 1));
+                print("");
 
-        for structures, degeneracies in spacegroupGroups.values():
-            structuresFlat = structuresFlat + structures;
-            degeneraciesFlat = degeneraciesFlat + degeneracies;
+            # Merge the structures and degeneracies in the spacegroup groups into a "flat" lists.
 
-        # Replace the placeholders.
+            structuresFlat, degeneraciesFlat = structureSet.GetStructureSetFlat();
 
-        for structure in structuresFlat:
-            structure.SwapAtoms(placeholder1, atom2);
-            structure.SwapAtoms(placeholder2, atom1);
+            # Clone the structures and replace the placeholders.
 
-        numStructures = len(structuresFlat);
+            newStructures = [];
 
-        # Regroup the structures.
+            for structure in structuresFlat:
+                structure = structure.Clone();
 
-        spacegroupGroups = StructureTools.GroupStructuresBySpacegroup(
-            structuresFlat, degeneraciesFlat, tolerance = tolerance
+                structure.SwapAtoms(
+                    [placeholder1, placeholder2], [atom2, atom1]
+                    );
+
+                newStructures.append(structure);
+
+            # Put the modified structures into a new structure set.
+
+            newStructureSet = structureSet.CloneNew(
+                structures = newStructures, degeneracies = degeneraciesFlat, noInitialMerge = True
+                );
+
+            if printProgressUpdate:
+                StructureTools.PrintStructureSetSummary(newStructureSet);
+
+            structureSet = newStructureSet;
+
+            counter = counter + 1;
+
+        # Yield the result.
+
+        yield (substitution, structureSet, permutationCount);
+
+
+# -----------------------
+# Solid Solution Function
+# -----------------------
+
+def SolidSolution(structure, atom1, atom2, printProgressUpdate = True, **kwargs):
+    # Set up generator function.
+
+    generator = _SolidSolutionIter(
+        structure, atom1, atom2, printProgressUpdate = printProgressUpdate, **kwargs
+        );
+
+    # Run the generator and capture the output.
+
+    substitutions, structureSets, permutationCounts = [], [], [];
+
+    for substitution, structureSet, permutationCount in generator:
+        substitutions.append(substitution);
+        structureSets.append(structureSet);
+        permutationCounts.append(permutationCount);
+
+    # If required, print a final summary of the results.
+
+    if printProgressUpdate:
+        Core._PrintResultSummary(
+            substitutions, structureSets, permutationCounts, [i for i in range(0, len(structureSets))]
             );
 
-        if printProgressUpdate:
-            StructureTools.PrintSpacegroupGroupSummary(spacegroupGroups);
+    return structureSets;
 
-        # Update the results.
+def SolidSolutionIter(structure, atom1, atom2, printProgressUpdate = True, **kwargs):
+    # Set up a generator function.
 
-        antisiteDefects[i + 1] = spacegroupGroups;
+    generator = _SolidSolutionIter(
+        structure, atom1, atom2, printProgressUpdate = printProgressUpdate, **kwargs
+        );
 
-    # Return the result.
+    # Run the generator and yield the structure sets.
 
-    return antisiteDefects;
+    for _, structureSet, _ in generator:
+        yield structureSet;
 
-
-# ---------------
-# Solid Solutions
-# ---------------
-
-def SolidSolution(structure, atom1, atom2, useShortcut = True, printProgressUpdate = True, **kwargs):
+def _SolidSolutionIter(structure, atom1, atom2, printProgressUpdate = True, **kwargs):
     # Convert atom1 and atom2 to atom-type numbers.
 
     atomFind = Structure.AtomTypeToAtomTypeNumber(atom1);
@@ -132,15 +227,13 @@ def SolidSolution(structure, atom1, atom2, useShortcut = True, printProgressUpda
 
     atomTypeNumbers = structure.GetAtomTypeNumbers();
 
-    # Sanity checks.
-
     if atomFind not in atomTypeNumbers:
         raise Exception("Error: The atom specified by atomTypeNumber1/atomicSymbol1 was not found in the supplied structure.");
 
     if atomReplace in atomTypeNumbers:
-        raise Exception("Error: the atom specified by atomTypeNumber2/atomicSymbol2 was found in the supplied structure - this is most likely an error.");
+        raise Exception("Error: The atom specified by atomTypeNumber2/atomicSymbol2 was found in the supplied structure - this is most likely an error.");
 
-    # Count the number of atoms to substitute.
+    # Count atoms to substitute.
 
     substitutionCount = 0;
 
@@ -148,110 +241,62 @@ def SolidSolution(structure, atom1, atom2, useShortcut = True, printProgressUpda
         if atomType == atomFind:
             substitutionCount = substitutionCount + 1;
 
-    # If useShortcut is set, we can save some time by only enumerating the structures for up to ~50 % substitution, and generating the rest by swapping atoms.
+    # We only need to enumerate the structures for up to ~50 % substitution, then we can generate the rest by swapping atoms.
 
-    substitutions = None;
+    substitutions = substitutions = [(atom1, atom2)] * (substitutionCount // 2);
 
-    if useShortcut:
-        substitutions = [(atom1, atom2)] * (substitutionCount // 2 + substitutionCount % 2);
-    else:
-        substitutions = [(atom1, atom2)] * substitutionCount;
+    # Perform substitutions.
 
-    # Build the set of solid solutions by performing successive atomic substitutions.
+    solidSolutions, permutationCounts = [], [];
 
-    _, solidSolutions = Core.AtomicSubstitutions(
+    generator = Core._AtomicSubstitutionsIter(
         structure, substitutions,
         printProgressUpdate = printProgressUpdate,
         **kwargs
         );
 
-    # If useShortcut is set, generate the structures for the remaining substitutions.
+    for _, structureSet, permutationCount in generator:
+        solidSolutions.append(structureSet);
+        permutationCounts.append(permutationCount);
 
-    if useShortcut:
-        # Select an atom-type number to use as a placeholder.
+        # Yield the substitution, structure set and permutation count.
 
-        placeholder = None;
+        yield ((atom1, atom2), structureSet, permutationCount);
 
-        trialTypeNumber = -1;
+    # Generate the structures for the remaining substitutions.
 
-        while True:
-            if trialTypeNumber not in atomTypeNumbers and trialTypeNumber != atomReplace:
-                placeholder = trialTypeNumber;
-                break;
-
-            trialTypeNumber = trialTypeNumber - 1;
-
-        for i in range(len(substitutions) + 1, substitutionCount + 1):
-            swapIndex = substitutionCount - i;
-
-            # If requested, print a progress update.
-
-            if printProgressUpdate:
-                print("SolidSolution(): Inverting substitution set {0} -> {1}".format(swapIndex, i));
-
-            resultSet = solidSolutions[swapIndex];
-
-            newResultSet = { };
-
-            for key, (structures, degeneracies) in resultSet.items():
-                newStructures = [];
-
-                for structure in structures:
-                    # Clone the structure.
-
-                    structure = structure.Clone();
-
-                    # Get a placeholder to temporarily swap atoms.
-
-                    placeholder = structure.GetAtomTypeNumberPlaceholder();
-
-                    if swapIndex != 0:
-                        # Temporarily swap atomReplace with placeholder.
-
-                        structure.SwapAtoms(atomReplace, placeholder);
-
-                    # Swap atomFind with atomReplace.
-
-                    structure.SwapAtoms(atomFind, atomReplace);
-
-                    if swapIndex != 0:
-                        # Finally, replace placeholder with atomFind.
-
-                        structure.SwapAtoms(placeholder, atomFind);
-
-                    # Add the new structure to the list.
-
-                    newStructures.append(structure);
-
-                # Add the new structures to the new result set, under the same spacegroup key, with a copy of the degeneracies.
-
-                newResultSet[key] = (
-                    newStructures, list(degeneracies)
-                    );
-
-            # Extend the list of solid solutions with the new result set.
-
-            solidSolutions.append(newResultSet);
+    for i in range(len(substitutions) + 1, substitutionCount + 1):
+        swapIndex = substitutionCount - i;
 
         if printProgressUpdate:
-            print("");
+            print("SolidSolution: Inverting substitution set {0} -> {1}".format(swapIndex, i));
 
-        if printProgressUpdate:
-            # Work out the number of permutations at each round of substitution.
+        structureSet = solidSolutions[swapIndex];
+        structuresFlat, degeneraciesFlat = structureSet.GetStructureSetFlat();
 
-            permutationCounts = [1];
+        newStructures = [];
 
-            for i in range(0, substitutionCount):
-                permutationCounts.append(
-                    permutationCounts[i] * (substitutionCount - i)
-                    );
+        for structure, degeneracy in zip(structuresFlat, degeneraciesFlat):
+            # Clone the structure, swap atomFind and atomReplace, then add it to the new list of structures.
 
-            # Print a summary of the new results ("repurposing" the _PrintResultSummary() function in the Framework.Core module).
+            structure = structure.Clone();
 
-            Core._PrintResultSummary(
-                [None] + [(atom1, atom2)] * substitutionCount, solidSolutions, permutationCounts, [i for i in range(0, len(solidSolutions))]
+            structure.SwapAtoms(
+                [atomFind, atomReplace], [atomReplace, atomFind]
                 );
 
-    # Return the result.
+            # Add the new structure to the list.
 
-    return solidSolutions;
+            newStructures.append(structure);
+
+        # Build and yield the new structure set.
+
+        newStructureSet = structureSet.CloneNew(
+            structures = newStructures, degeneracies = degeneraciesFlat, noInitialMerge = True
+            );
+
+        solidSolutions.append(newStructureSet);
+
+        yield ((atom1, atom2), newStructureSet, permutationCounts[swapIndex]);
+
+    print("");

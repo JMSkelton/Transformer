@@ -21,29 +21,11 @@ def CartesianToFractionalCoordinates(latticeVectors, atomPositions):
 
     return [np.dot(position, transformationMatrix) for position in atomPositions];
 
-def GroupStructuresBySpacegroup(structures, degeneracies = None, tolerance = None):
-    spacegroupGroups = { };
+def PrintStructureSetSummary(structureSet):
+    # Get the internal dictionary.
 
-    for i, structure in enumerate(structures):
-        # spacegroupGroups will be keyed by tules of (spacegroupNumber, spacegroupSymbol), as returned by the Structure.GetSpacegroup() routine.
+    spacegroupGroups = structureSet.GetStructureSet();
 
-        key = structure.GetSpacegroup(tolerance = tolerance);
-
-        if key in spacegroupGroups:
-            groupStructures, groupDegeneracies = spacegroupGroups[key];
-
-            groupStructures.append(structure);
-
-            if degeneracies != None:
-                groupDegeneracies.append(degeneracies[i]);
-        else:
-            spacegroupGroups[key] = (
-                [structure], [degeneracies[i]] if degeneracies != None else None
-                );
-
-    return spacegroupGroups;
-
-def PrintSpacegroupGroupSummary(spacegroupGroups):
     # Sort the dictionary keys.
     # The first element of the key tuples is the spacegroup number, so sorting will put the keys ascending symmetry order.
     # It's more intuitive to print the table rows in order of descending symmetry, so we reverse the list.

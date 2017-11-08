@@ -24,7 +24,7 @@ try:
 
     _Cython = True;
 except ImportError:
-    warnings.warn("Optimised merging functions require the pyximport module from the Cython package.", RuntimeWarning);
+    warnings.warn("Optimised merging requires the pyximport module from the Cython package.", RuntimeWarning);
 
 
 # ------------------
@@ -32,38 +32,102 @@ except ImportError:
 # ------------------
 
 class StructureSet(object):
+    """
+    Class for maintaining a set of unique Structure objects and associated degeneracies.
+
+    Structures can be compared with a set of user-supplied symmetry operations, which are used to transform structures to symmetry-equivalent configurations.
+
+    Internally, the set is stored in a dictionary where:
+        - the keys are (spacegroup_number, spacegroup_symbol) tuples; and
+        - the values are tuples of (structures, degeneracies) lists
+
+    If the pyximport module from the Cython package is available, the symmetry transformations and structure comparisons are sped up using C kernels.
+    """
+
     # -----------
     # Constructor
     # -----------
 
-    def __init__(self, tolerance = None, parentSymmetryOperations = None):
+    def __init__(
+        self,
+        tolerance = None, parentSymmetryOperations = None,
+        structures = None, degeneracies = None, noInitialMerge = False
+        ):
+
+        """
+        Class constructor.
+
+        Keyword arguments:
+            tolerance -- symmetry tolerance for structure comparisons.
+            parentSymmetryOperations -- symmetry operations to be used to transform structures to symmetry-equivalent configurations.
+            structures, degeneracies -- lists of structures and degeneracies to initialise the set with.
+            noInitialMerge -- if True, do not merge the initial structures (if supplied).
+        """
+
         # If tolerance is not set, use the default from the Structure class.
 
         if tolerance == None:
             tolerance = Structure.DefaultSymmetryEquivalenceTolerance;
 
-        # Store variables.
+        # If an iniital list of structures is provided, check/initialise the list of degeneracies.
+
+        if structures != None:
+            if degeneracies != None:
+                if len(degeneracies) != len(structures):
+                    raise Exception("Error: If supplied, degeneracies must contain one entry for each structure in the list of structures.");
+            else:
+                # If degeneracies are not supplied, set it to a list of ones.
+
+                degeneracies = [1] * len(structures);
+        else:
+            if degeneracies != None:
+                raise Exception("Error: degeneracies can only be supplied alongside a list of structures.");
 
         self._tolerance = tolerance;
         self._parentSymmetryOperations = parentSymmetryOperations;
 
-        # Initialise an internal dictionary to store structures and degeneracies in spacegroup groups.
-
         self._structureSet = { };
+
+        # If a list of structure has been supplied, initialise the structure set.
+
+        if structures != None:
+            if noInitialMerge:
+                # If noInitialMerge is set, bypass merging and populate the set directly.
+
+                structureSet = self._structureSet;
+
+                for structure, degeneracy in zip(structures, degeneracies):
+                    spacegroup = structure.GetSpacegroup();
+
+                    if spacegroup not in structureSet:
+                        structureSet[spacegroup] = ([structure], [degeneracy]);
+                    else:
+                        structureList, degeneracyList = structureSet[spacegroup];
+
+                        structureList.append(structure);
+                        degeneracyList.append(degeneracy);
+            else:
+                # If not, pass the structures and degeneracies to the _AddStructures() method to be merged in.
+
+                self._AddStructures(structures, degeneracies, isUnion = False);
+
 
     # ---------------
     # Private Methods
     # ---------------
 
-    def _AddStructures(self, structures, degeneracies, isUnion = False):
-        # Load fields.
+    def _AddStructures(self, structures, degeneracies, isUnion):
+        """
+        Merge a list of structures and degeneracies into the set and return the number of structures added.
+        If isUnion is True, assume the structures in the list are unique, and only compare them to structures in the initial set while merging.
+        """
 
         tolerance = self._tolerance;
         parentSymmetryOperations = self._parentSymmetryOperations;
 
         structureSet = self._structureSet;
 
-        # If isUnion is set, we only need to compare new structures to the ones currently in the set.
+        # If isUnion is set, we assume the new structures are unique and apply a performance optimisation by only comparing new structures to those in the initial set.
         # For this, we need to store the number of structures in each spacegroup group before we add any new ones.
 
         compareMaxIndices = None;
@@ -78,25 +142,21 @@ class StructureSet(object):
 
         addCount = 0;
 
-        # Loop over new structures and degeneracies.
-
         for structure, degeneracy in zip(structures, degeneracies):
-            # Find the spacegroup.
-
+            atomCount = structure.GetAtomCount();
             spacegroup = structure.GetSpacegroup(tolerance = tolerance);
 
             if spacegroup not in structureSet:
                 # If there is no entry in the structure set for the spacegroup, create one.
 
-                structureSet[spacegroup] = [[structure], [degeneracy]];
+                structureSet[spacegroup] = ([structure], [degeneracy]);
 
                 addCount += 1;
-            else:
-                # Load the lists of structures and degeneracies.
 
+            else:
                 structureList, degeneracyList = structureSet[spacegroup];
 
-                # Depending on whether compareMaxIndices has been initialised, work out which structures in the list we need to compare against.
+                # Work out the range of structures to compare against.
 
                 compareMaxIndex = None;
 
@@ -105,11 +165,7 @@ class StructureSet(object):
                 else:
                     compareMaxIndex = len(structureList);
 
-                # Load the atom count.
-
-                atomCount = structure.GetAtomCount();
-
-                # Varible to keep track of the index of the structure in the set the new structure matches with.
+                # Store the index of the existing structure the new structure matches.
 
                 matchIndex = None;
 
@@ -118,7 +174,7 @@ class StructureSet(object):
 
                 transformedPositions = None;
 
-                # Compare the new structure to those in the current set (up to compareMaxIndex).
+                # Compare against structures in the current set up to compareMaxIndex.
 
                 for i in range(0, compareMaxIndex):
                     compareStructure = structureList[i];
@@ -127,12 +183,12 @@ class StructureSet(object):
 
                     match = compareStructure.GetAtomCount() == atomCount;
 
-                    # Compare lattice vectors if required.
+                    # Compare lattice vectors.
 
                     if match:
                         match = structure.CompareLatticeVectors(compareStructure, tolerance = tolerance);
 
-                    # Compare atom-type numbers if required.
+                    # Compare atom-type numbers.
 
                     if match:
                         atomTypeNumbers1 = compareStructure.GetAtomTypeNumbersNumPy(copy = False);
@@ -140,41 +196,28 @@ class StructureSet(object):
 
                         match = (atomTypeNumbers1 == atomTypeNumbers2).all();
 
-                    # Compare atom positions if required.
+                    # Compare atom positions.
 
                     if match:
-                        # Initialise transformedPositions if required.
-
                         if transformedPositions is None:
-                            # If a set of symmetry operations for a parent structure have been supplied, generate symmetry-transformed positions for the new structure; if not, compare the positions directly.
-
                             if self._parentSymmetryOperations != None:
-                                # Use the Cython-optimised routines if available; if not, fall back to the NumPy implementation.
+                                # If a set of symmetry operations have been supplied, generate symmetry-transformed positions for the new structure.
 
-                                if _Cython:
-                                    transformedPositions = _StructureSet._GenerateSymmetryTransformedPositions(
-                                        structure, parentSymmetryOperations, tolerance
-                                        );
-                                else:
-                                    transformedPositions = _GenerateSymmetryTransformedPositions(
-                                        structure, parentSymmetryOperations, tolerance
-                                        );
+                                transformedPositions = _StructureSet._GenerateSymmetryTransformedPositions(
+                                    structure, parentSymmetryOperations, tolerance
+                                    );
                             else:
+                                # If not, just compare positions directly.
+
                                 transformedPositions = np.array(
                                     [structure.GetAtomPositionsNumPy(copy = False)]
                                     );
 
-                        # Use the Cython-optimised comparison routines if available; if not, fall back to the NumPy implementation.
-                        # For the compareAtomIndexRanges (fourth) parameter of both functions, we set a single range spanning all the atoms.
+                        # For the compareAtomIndexRanges (fourth) parameter, we set a single range spanning all the atoms.
 
-                        if _Cython:
-                            match = _StructureSet._CompareAtomPositions(
-                                compareStructure.GetAtomPositionsNumPy(copy = False), transformedPositions, tolerance, [(0, atomCount)]
-                                );
-                        else:
-                            match = _CompareAtomPositions(
-                                compareStructure.GetAtomPositionsNumPy(copy = False), transformedPositions, tolerance, [(0, atomCount)]
-                                );
+                        match = _CompareAtomPositions(
+                            compareStructure.GetAtomPositionsNumPy(copy = False), transformedPositions, tolerance, [(0, atomCount)]
+                            );
 
                     if match:
                         # If the new structure matches, record the index of the match and break.
@@ -187,7 +230,7 @@ class StructureSet(object):
 
                     degeneracyList[matchIndex] += degeneracy;
                 else:
-                    # If not, add the new structure and degeneracy to the internal sets.
+                    # If not, add the new structure and degeneracy to the lists.
 
                     structureList.append(structure);
                     degeneracyList.append(degeneracy);
@@ -203,10 +246,15 @@ class StructureSet(object):
     # --------------
 
     def GetStructureSet(self):
+        """
+        Return the internal dictionary representation of the structure set.
+        The keys are (spacegroup_number, spacegroup_symbol) tuples, and the values are tuples of (structures, degeneracies) lists.
+        """
+
         return self._structureSet;
 
     def GetStructureSetFlat(self):
-        # Convert the structure set dictionary into "flat" lists of structures and associated degeneracies.
+        """ Return the internal structure set as "flat" lists of structures and degeneracies. """
 
         structureSet = self._structureSet;
 
@@ -221,6 +269,8 @@ class StructureSet(object):
         return (structuresFlat, degeneraciesFlat);
 
     def GetStructureCount(self):
+        """ Return the number of structures in the set. """
+
         structureCount = sum(
             len(structureList) for structureList, _ in self._structureSet.values()
             );
@@ -228,17 +278,20 @@ class StructureSet(object):
         return structureCount;
 
     def Add(self, structure, degeneracy = 1):
-        # Sanity check.
+        """
+        Merge structure into the set with the optional supplied degeneracy.
+        Returns True if the structure was added as a new structure, and False if it was merged with one already in the set.
+        """
 
         if structure == None:
             raise Exception("Error: structure cannot be None.");
 
-        addCount = self._AddStructures([structure], [degeneracy]);
+        addCount = self._AddStructures([structure], [degeneracy], isUnion = False);
 
-        return True if addCount == 1 else False;
+        return addCount == 1;
 
     def Update(self, structures, degeneracies = None):
-        # Sanity checks.
+        """ Merge the list of structures into the set with the optional supplied degeneracies, and return the number of new structures added. """
 
         if structures == None:
             raise Exception("Error: structures cannot be None.");
@@ -249,42 +302,45 @@ class StructureSet(object):
         if degeneracies == None:
             degeneracies = [1] * len(structures);
 
-        return self._AddStructures(structures, degeneracies);
+        return self._AddStructures(structures, degeneracies, isUnion = False);
 
     def UpdateUnion(self, structureSet):
+        """
+        Perform a union operation with structureSet and return the number of new structures added.
+        A union is only valid when both structure sets use the same parameters for identifying unique structures.
+        """
+
         if structureSet == None:
             raise Excpetion("Error: structureSet cannot be None.");
 
-        # Technically, a union operation is only valid when the calling and argument structure sets are configured with the same equality comparisons.
-        # If this is the case, we can apply a performance optimisation: we only need to compare structures in the new structure set to those in the calling one _before_ the union, i.e. as we add new structures to the calling set, we do not need to compare them to additional ones added from the new structure set.
-        # If not, issue a warning and default to the behaviour Update() method.
+        # Check the union is valid and issue a warning if not.
 
         isUnion = self.CompareEquivalenceSettings(structureSet);
 
         if not isUnion:
-            warnings.warn("UpdateUnion() is only valid when the supplied StructureSet object is set to use the same equality-comparison settings as the calling object.", UserWarning);
+            warnings.warn("UpdateUnion() is only valid when the supplied structure set is set to use the same comparison parameters as the calling one.", UserWarning);
 
         return self._AddStructures(*structureSet.GetStructureSetFlat(), isUnion = isUnion);
 
     def CompareEquivalenceSettings(self, structureSet):
+        """ Compare the parameters used to determine structural equality with those of structureSet. """
+
         # Compare tolerances.
 
-        toleranceEquivalenceThreshold = min(self._tolerance, structureSet._tolerance) / 10.0;
+        tolerance = self._tolerance;
 
-        equivalent = (math.fabs(self._tolerance - structureSet._tolerance) < toleranceEquivalenceThreshold);
+        # To compare tolerances, we set a threshold an order of magnitude tighter than the minimum tolerance.
+
+        equivalent = math.fabs(tolerance - structureSet._tolerance) < (min(tolerance, structureSet._tolerance) / 10.0);
 
         if equivalent:
-            # Compare parent symmetry operations.
+            # Compare symmetry operations.
 
             if self._parentSymmetryOperations != None:
                 if structureSet._parentSymmetryOperations != None:
-                    # Use the set tolerance (should be the same for the calling and argument StructureSet objects) to compare translations.
-
-                    tolerance = self._tolerance;
-
-                    # Compare symmetry operations.
-
                     for (rotation1, translation1), (rotation2, translation2) in zip(self._parentSymmetryOperations, structureSet._parentSymmetryOperations):
+                        # rotation matrices are integers, and translation vectors are floating-point numbers.
+
                         equivalent = equivalent and (rotation1 == rotation2).all();
                         equivalent = equivalent and (np.abs(translation1 - translation2) < tolerance).all();
 
@@ -298,20 +354,53 @@ class StructureSet(object):
 
         return equivalent;
 
+    def CloneNew(self, structures = None, degeneracies = None, noInitialMerge = False):
+        """
+        Return a new StructureSet object with the same comparison settings.
+        Optionally, pass the structures, degeneracies and noInitialMerge argument to the constructor.
+        """
+
+        return StructureSet(
+            tolerance = self._tolerance, parentSymmetryOperations = self._parentSymmetryOperations,
+            structures = structures, degeneracies = degeneracies, noInitialMerge = noInitialMerge
+            );
+
 
 # ---------------------
 # StructureSetOpt Class
 # ---------------------
 
 class StructureSetOpt(StructureSet):
+    """
+    An optimised StructureSet class which:
+        - assumes all the structures have the same lattice vectors and composition; and
+        - can optionally be configured to compare only certain ranges of atom positions
+
+    These performance optimisations are used by the atomic-substitutions framework routines.
+    """
+
     # -----------
     # Constructor
     # -----------
 
-    def __init__(self, expectedAtomCount, tolerance = None, parentSymmetryOperations = None, compareAtomIndexRanges = None):
-        # Call the base-class constructor with the tolerance and parent symmetry operations.
+    def __init__(
+        self,
+        expectedAtomCount, tolerance = None, parentSymmetryOperations = None,
+        structures = None, degeneracies = None, noInitialMerge = False,
+        compareAtomIndexRanges = None
+        ):
 
-        super(StructureSetOpt, self).__init__(tolerance, parentSymmetryOperations);
+        """
+        Constructor.
+
+        Arguments:
+            expectedAtomCount -- number of atoms in structures.
+
+        Keyword arguments:
+            tolerance, parentSymmetryOperations -- as for StructureSet class.
+            structures, degeneracies, noInitialMerge -- as for StructureSet class.
+            compareAtomIndexRanges -- tuples of (start_inclusive, end_exclusive) index ranges over which to compare atoms.
+        """
 
         # Validate expectedAtomCount.
 
@@ -339,21 +428,21 @@ class StructureSetOpt(StructureSet):
             if index2 > expectedAtomCount:
                 raise Exception("Error: If supplied, ranges in compareAtomIndexRanges must be consistent with expectedAtomCount.");
 
-        # Store fields.
-
         self._expectedAtomCount = expectedAtomCount;
-
         self._compareAtomIndexRanges = compareAtomIndexRanges;
+
+        # Call the base-class constructor.
+
+        super(StructureSetOpt, self).__init__(tolerance = tolerance, parentSymmetryOperations = parentSymmetryOperations, structures = structures, degeneracies = degeneracies, noInitialMerge = noInitialMerge);
 
     # ---------------
     # Private Methods
     # ---------------
 
-    def _AddStructures(self, structures, degeneracies, isUnion = False):
-        # Override the _AddStructures() method from the StructureSet class.
-        # Unfortunately, there was no (obvious) way to do this without some code duplication.
+    def _AddStructures(self, structures, degeneracies, isUnion):
+        """ Override of the _AddStructures() method from the StructureSet class. """
 
-        # Check the structure atom counts.
+        # Check atom counts.
 
         expectedAtomCount = self._expectedAtomCount;
 
@@ -361,15 +450,13 @@ class StructureSetOpt(StructureSet):
             if structure.GetAtomCount() != expectedAtomCount:
                 raise Exception("Error: One or more supplied structures do not have the expected number of atoms.");
 
-        # Load fields.
-
         tolerance = self._tolerance;
         parentSymmetryOperations = self._parentSymmetryOperations;
         compareAtomIndexRanges = self._compareAtomIndexRanges;
 
         structureSet = self._structureSet;
 
-        # The next chunk of initialisation code is duplicated from the _AddStructure() method from the StructureSet class.
+        # Initialisation code duplicated from the _AddStructure() method from the StructureSet class.
 
         compareMaxIndices = None;
 
@@ -379,11 +466,9 @@ class StructureSetOpt(StructureSet):
                     in structureSet.items()
                 };
 
-        # Count the number of added structures.
+        # Keep track of the number of structures added.
 
         addCount = 0;
-
-        # Loop over new structures and degeneracies.
 
         for structure, degeneracy in zip(structures, degeneracies):
             spacegroup = structure.GetSpacegroup(tolerance = tolerance);
@@ -404,19 +489,14 @@ class StructureSetOpt(StructureSet):
                 else:
                     compareMaxIndex = len(structureList);
 
-                # We will always need the transformed positions, so we don't need to use lazy initialisation.
+                # We will always need the transformed positions -> no need to use lazy initialisation.
 
                 transformedPositions = None;
 
                 if self._parentSymmetryOperations != None:
-                    if _Cython:
-                        transformedPositions = _StructureSet._GenerateSymmetryTransformedPositions(
-                            structure, parentSymmetryOperations, tolerance
-                            );
-                    else:
-                        transformedPositions = _GenerateSymmetryTransformedPositions(
-                            structure, parentSymmetryOperations, tolerance
-                            );
+                    transformedPositions = _GenerateSymmetryTransformedPositions(
+                        structure, parentSymmetryOperations, tolerance
+                        );
                 else:
                     transformedPositions = np.array(
                         [structure.GetAtomPositionsNumPy(copy = False)]
@@ -431,16 +511,9 @@ class StructureSetOpt(StructureSet):
 
                     # Compare positions.
 
-                    match = None;
-
-                    if _Cython:
-                        match = _StructureSet._CompareAtomPositions(
-                            compareStructure.GetAtomPositionsNumPy(copy = False), transformedPositions, tolerance, compareAtomIndexRanges
-                            );
-                    else:
-                        match = _CompareAtomPositions(
-                            compareStructure.GetAtomPositionsNumPy(copy = False), transformedPositions, tolerance, compareAtomIndexRanges
-                            );
+                    match = _CompareAtomPositions(
+                        compareStructure.GetAtomPositionsNumPy(copy = False), transformedPositions, tolerance, compareAtomIndexRanges
+                        );
 
                     if match:
                         matchIndex = i;
@@ -465,6 +538,13 @@ class StructureSetOpt(StructureSet):
     # --------------
 
     def CompareEquivalenceSettings(self, structureSetOpt):
+        """
+        Compare the parameters used to determine structural equality with those of structureSetOpt.
+
+        Notes:
+            This overrides the CompareEquivalenceSettings() method of the StructureSet class, and will return False if structureSetOpt is not an instance of StructureSetOpt.
+        """
+
         # If the supplied structure set is not of type StructureSetOpt, the number of atoms isn't guarenteed to be fixed -> return False.
 
         if not isinstance(structureSetOpt, StructureSetOpt):
@@ -489,14 +569,47 @@ class StructureSetOpt(StructureSet):
 
         return super(StructureSetOpt, self).CompareEquivalenceSettings(structureSetOpt);
 
+    def CloneNew(self, structures = None, degeneracies = None, noInitialMerge = False, compareAtomIndexRanges = None):
+        """
+        Return a new StructureSetOpt object with the same comparison settings.
+        Optionally, pass the structures, degeneracies, noInitialMerge and compareAtomIndexRanges arguments to the constructor.
 
-# --------------
-# Static Methods
-# --------------
+        Notes:
+            This overrides the CloneNew() method of the StructureSet class.
+            The atom-index ranges are not cloned by default, since these are intended as a performance optimisation rather than a comparison setting.
+        """
 
-# These should ideally be included in the StructureSet class, but Python 2.x doesn't allow classes to have static methods attached to them.
+        return StructureSetOpt(
+            self._expectedAtomCount, tolerance = self._tolerance, parentSymmetryOperations = self._parentSymmetryOperations,
+            structures = structures, degeneracies = degeneracies, noInitialMerge = noInitialMerge,
+            compareAtomIndexRanges = compareAtomIndexRanges
+            );
+
+# ------------------
+# Internal Functions
+# ------------------
 
 def _CompareAtomPositions(comparePositions, refTransformedPositions, tolerance, compareAtomIndexRanges):
+    """
+    Return true if the atomic positions in comparePositions match any of the set of reference symmetry-transformed positions in refTransformedPositions to within the supplied tolerane.
+    Only the position ranges is .
+
+    Arguments:
+        comparePositions -- an Nx3 NumPy matrix containing a set of atom positions.
+        refTransformedPositions -- an MxNx3 NumPy matrix containing a set of reference symmetry-transformed atom positions.
+        tolerance -- symmetry tolerance for comparing atom positions.
+        compareAtomIndexRanges --
+
+    Notes:
+        No default initialisation of compareAtomIndexRanges is performed by this function.
+        No parameter or bounds checking is performed by this function.
+    """
+
+    # If the Cython-optimised routines in the _StructureSet module are available, use those.
+
+    if _Cython:
+        return _StructureSet._CompareAtomPositions(comparePositions, refTransformedPositions, tolerance, compareAtomIndexRanges);
+
     # Start by assuming all the sets of transformed positions match.
 
     match = np.ones(refTransformedPositions.shape[0], dtype = np.bool);
@@ -517,7 +630,23 @@ def _CompareAtomPositions(comparePositions, refTransformedPositions, tolerance, 
     return match.any();
 
 def _GenerateSymmetryTransformedPositions(structure, symmetryOperations, tolerance):
-    # Get the atom data from the supplied Structure object.
+    """
+    Generate M sets of symmetry-transformed positions from structure using the supplied symmetry operations.
+
+    Arguments:
+        structure -- a Structure object with the positions to be transformed.
+        symmetryOperations -- a list of (rotation, translation) tuples specifying the symmetry transformations to apply.
+        tolerance -- symmetry tolerance for adjusting transformed positions to minimise numerical noise.
+
+    Return value:
+        An MxNx3 NumPy matrix containing M transformed sets of N atomic positions specified as NumPy vectors.
+        The positions are returned sorted by atom type then position, i.e. they match the internal data layout used in the Structure class.
+    """
+
+    # If the Cython-optimised routines in the _StructureSet module are available, use those.
+
+    if _Cython:
+        return _StructureSet._GenerateSymmetryTransformedPositions(structure, symmetryOperations, tolerance);
 
     atomData = structure.GetAtomDataNumPy(copy = False);
 
@@ -531,8 +660,6 @@ def _GenerateSymmetryTransformedPositions(structure, symmetryOperations, toleran
     transformedStructures[:] = atomData;
 
     transformedPositions = transformedStructures.view(dtype = np.float64).reshape((numSymOps, numAtoms, 4))[:, :, 1:];
-
-    # Loop over symmetry operations and transform the positions in each block of data.
 
     for i, (rotation, translation) in enumerate(symmetryOperations):
         # Apply the rotation and translation.
@@ -553,11 +680,6 @@ def _GenerateSymmetryTransformedPositions(structure, symmetryOperations, toleran
 
     for i in range(0, numSymOps):
         transformedStructures[i].sort();
-
-    # Eliminate redundant transformed structures.
-    # This is a relatively expensive operation, but appears to be worth it when using the pure-Python merging routines.
-
-    transformedStructures = np.unique(transformedStructures, axis = 0)
 
     # Return a view to the transformed positions.
 

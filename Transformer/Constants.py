@@ -1,13 +1,22 @@
 # Transformer/Constants.py
 
 
+# ----------------
+# Module Docstring
+# ----------------
+
+""" Contains constants used by other modules. """
+
+
 # --------------
 # Periodic Table
 # --------------
 
-# The symbol 'X' is assigned to zero -- spglib functions will happily accept this as a wildcard.
+""" Periodic table for mapping atomic symbols to atom-type numbers. """
 
 PeriodicTable = [
+    # The symbol 'X' is assigned to zero -- spglib functions will happily accept this as a wildcard.
+
      'X',
      'H', 'He',
     'Li', 'Be',                                                                                                                                                  'B',  'C',  'N',  'O',  'F', 'Ne',
@@ -19,16 +28,22 @@ PeriodicTable = [
     ];
 
 def SymbolToAtomicNumber(symbol):
-    for i, testSymbol in enumerate(PeriodicTable):
-        # Make sure symbol has the correct casing.
+    """ Lookup symbol in the periodic table and return the corresponding atomic number. """
 
-        if symbol.title() == testSymbol:
-            return i;
+    if symbol != None:
+        for i, testSymbol in enumerate(PeriodicTable):
+            # Make sure symbol has the correct casing.
+
+            if symbol.title() == testSymbol:
+                return i;
 
     return None;
 
 def AtomicNumberToSymbol(atomicNumber):
-    if atomicNumber >= 0 and atomicNumber < len(PeriodicTable):
-        return PeriodicTable[atomicNumber];
-    else:
-        return None;
+    """ Lookup atomicNumber in the periodic table and return the corresponding atomic symbol. """
+
+    if atomicNumber != None:
+        if atomicNumber >= 0 and atomicNumber < len(PeriodicTable):
+            return PeriodicTable[atomicNumber];
+
+    return None;

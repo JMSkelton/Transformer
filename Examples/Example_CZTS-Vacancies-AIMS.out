@@ -1,17 +1,17 @@
-AtomicSubstitutions(): Performing substitution 1 (Cu -> None)
-AtomicSubstitutions(): Initial structure set contains 1 structure(s)
+AtomicSubstitutions: Performing substitution 1 (Cu -> None)
+AtomicSubstitutions: Initial structure set contains 1 structure(s)
 
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
 81  P-4          |               16 |                2
 
-AtomicSubstitutions(): Performing substitution 2 (Cu -> None)
-AtomicSubstitutions(): Initial structure set contains 2 structure(s)
+AtomicSubstitutions: Performing substitution 2 (Cu -> None)
+AtomicSubstitutions: Initial structure set contains 2 structure(s)
 
 
-AtomicSubstitutions(): Substituted set contained 10 structure(s)
-AtomicSubstitutions(): Filtering/merging removed 2 structure(s)
+AtomicSubstitutions: Substituted set contained 10 structure(s)
+AtomicSubstitutions: Filtering/merging removed 2 structure(s)
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
@@ -20,7 +20,7 @@ AtomicSubstitutions(): Filtering/merging removed 2 structure(s)
 3   P2           |               32 |                2
 1   P1           |              128 |                2
 
-AtomicSubstitutions(): All substitutions performed.
+AtomicSubstitutions: All substitutions performed.
 
   Substitution   |  # Structures   | sum(Degeneracy) |  Permutations  
 ----------------------------------------------------------------------
@@ -28,50 +28,50 @@ AtomicSubstitutions(): All substitutions performed.
 1   Cu   -> None |               2 |              16 |              16
 2   Cu   -> None |               8 |             240 |             240
 
-AtomicSubstitutions(): Performing substitution 1 (Zn -> None)
-AtomicSubstitutions(): Initial structure set contains 1 structure(s)
+AtomicSubstitutions: Performing substitution 1 (Zn -> None)
+AtomicSubstitutions: Initial structure set contains 1 structure(s)
 
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
 81  P-4          |                8 |                1
 
-AtomicSubstitutions(): All substitutions performed.
+AtomicSubstitutions: All substitutions performed.
 
   Substitution   |  # Structures   | sum(Degeneracy) |  Permutations  
 ----------------------------------------------------------------------
 0   None         |               1 |               1 |               1
 1   Zn   -> None |               1 |               8 |               8
 
-AtomicSubstitutions(): Performing substitution 1 (Sn -> None)
-AtomicSubstitutions(): Initial structure set contains 1 structure(s)
+AtomicSubstitutions: Performing substitution 1 (Sn -> None)
+AtomicSubstitutions: Initial structure set contains 1 structure(s)
 
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
 81  P-4          |                8 |                1
 
-AtomicSubstitutions(): All substitutions performed.
+AtomicSubstitutions: All substitutions performed.
 
   Substitution   |  # Structures   | sum(Degeneracy) |  Permutations  
 ----------------------------------------------------------------------
 0   None         |               1 |               1 |               1
 1   Sn   -> None |               1 |               8 |               8
 
-AtomicSubstitutions(): Performing substitution 1 (S -> None)
-AtomicSubstitutions(): Initial structure set contains 1 structure(s)
+AtomicSubstitutions: Performing substitution 1 (S -> None)
+AtomicSubstitutions: Initial structure set contains 1 structure(s)
 
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
 1   P1           |               32 |                1
 
-AtomicSubstitutions(): Performing substitution 2 (S -> None)
-AtomicSubstitutions(): Initial structure set contains 1 structure(s)
+AtomicSubstitutions: Performing substitution 2 (S -> None)
+AtomicSubstitutions: Initial structure set contains 1 structure(s)
 
 
-AtomicSubstitutions(): Substituted set contained 31 structure(s)
-AtomicSubstitutions(): Filtering/merging removed 10 structure(s)
+AtomicSubstitutions: Substituted set contained 31 structure(s)
+AtomicSubstitutions: Filtering/merging removed 10 structure(s)
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
@@ -79,23 +79,23 @@ AtomicSubstitutions(): Filtering/merging removed 10 structure(s)
 3   P2           |              128 |                4
 1   P1           |              736 |               13
 
-AtomicSubstitutions(): Performing substitution 3 (S -> None)
-AtomicSubstitutions(): Initial structure set contains 21 structure(s)
+AtomicSubstitutions: Performing substitution 3 (S -> None)
+AtomicSubstitutions: Initial structure set contains 21 structure(s)
 
 
-AtomicSubstitutions(): Substituted set contained 465 structure(s)
-AtomicSubstitutions(): Filtering/merging removed 310 structure(s)
+AtomicSubstitutions: Substituted set contained 465 structure(s)
+AtomicSubstitutions: Filtering/merging removed 310 structure(s)
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
 1   P1           |           29,760 |              155
 
-AtomicSubstitutions(): Performing substitution 4 (S -> None)
-AtomicSubstitutions(): Initial structure set contains 155 structure(s)
+AtomicSubstitutions: Performing substitution 4 (S -> None)
+AtomicSubstitutions: Initial structure set contains 155 structure(s)
 
 
-AtomicSubstitutions(): Substituted set contained 4495 structure(s)
-AtomicSubstitutions(): Filtering/merging removed 3325 structure(s)
+AtomicSubstitutions: Substituted set contained 4495 structure(s)
+AtomicSubstitutions: Filtering/merging removed 3325 structure(s)
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
@@ -104,7 +104,7 @@ AtomicSubstitutions(): Filtering/merging removed 3325 structure(s)
 3   P2           |            8,832 |               26
 1   P1           |          842,304 |            1,106
 
-AtomicSubstitutions(): All substitutions performed.
+AtomicSubstitutions: All substitutions performed.
 
   Substitution   |  # Structures   | sum(Degeneracy) |  Permutations  
 ----------------------------------------------------------------------
@@ -114,20 +114,20 @@ AtomicSubstitutions(): All substitutions performed.
 3   S    -> None |             155 |          29,760 |          29,760
 4   S    -> None |           1,170 |         863,040 |         863,040
 
-AtomicSubstitutions(): Performing substitution 1 (Cu -> None)
-AtomicSubstitutions(): Initial structure set contains 1 structure(s)
+AtomicSubstitutions: Performing substitution 1 (Cu -> None)
+AtomicSubstitutions: Initial structure set contains 1 structure(s)
 
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
 81  P-4          |               16 |                2
 
-AtomicSubstitutions(): Performing substitution 2 (Cu -> None)
-AtomicSubstitutions(): Initial structure set contains 2 structure(s)
+AtomicSubstitutions: Performing substitution 2 (Cu -> None)
+AtomicSubstitutions: Initial structure set contains 2 structure(s)
 
 
-AtomicSubstitutions(): Substituted set contained 10 structure(s)
-AtomicSubstitutions(): Filtering/merging removed 2 structure(s)
+AtomicSubstitutions: Substituted set contained 10 structure(s)
+AtomicSubstitutions: Filtering/merging removed 2 structure(s)
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
@@ -136,15 +136,15 @@ AtomicSubstitutions(): Filtering/merging removed 2 structure(s)
 3   P2           |               32 |                2
 1   P1           |              128 |                2
 
-AtomicSubstitutions(): Performing substitution 3 (S -> None)
-AtomicSubstitutions(): Initial structure set contains 8 structure(s)
+AtomicSubstitutions: Performing substitution 3 (S -> None)
+AtomicSubstitutions: Initial structure set contains 8 structure(s)
 
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
 1   P1           |            7,680 |              120
 
-AtomicSubstitutions(): All substitutions performed.
+AtomicSubstitutions: All substitutions performed.
 
   Substitution   |  # Structures   | sum(Degeneracy) |  Permutations  
 ----------------------------------------------------------------------
@@ -153,23 +153,23 @@ AtomicSubstitutions(): All substitutions performed.
 2   Cu   -> None |               - |               - |             240
 3   S    -> None |             120 |           7,680 |           7,680
 
-AtomicSubstitutions(): Performing substitution 1 (Zn -> None)
-AtomicSubstitutions(): Initial structure set contains 1 structure(s)
+AtomicSubstitutions: Performing substitution 1 (Zn -> None)
+AtomicSubstitutions: Initial structure set contains 1 structure(s)
 
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
 81  P-4          |                8 |                1
 
-AtomicSubstitutions(): Performing substitution 2 (S -> None)
-AtomicSubstitutions(): Initial structure set contains 1 structure(s)
+AtomicSubstitutions: Performing substitution 2 (S -> None)
+AtomicSubstitutions: Initial structure set contains 1 structure(s)
 
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
 1   P1           |              256 |                8
 
-AtomicSubstitutions(): All substitutions performed.
+AtomicSubstitutions: All substitutions performed.
 
   Substitution   |  # Structures   | sum(Degeneracy) |  Permutations  
 ----------------------------------------------------------------------
@@ -177,35 +177,35 @@ AtomicSubstitutions(): All substitutions performed.
 1   Zn   -> None |               - |               - |               8
 2   S    -> None |               8 |             256 |             256
 
-AtomicSubstitutions(): Performing substitution 1 (Sn -> None)
-AtomicSubstitutions(): Initial structure set contains 1 structure(s)
+AtomicSubstitutions: Performing substitution 1 (Sn -> None)
+AtomicSubstitutions: Initial structure set contains 1 structure(s)
 
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
 81  P-4          |                8 |                1
 
-AtomicSubstitutions(): Performing substitution 2 (S -> None)
-AtomicSubstitutions(): Initial structure set contains 1 structure(s)
+AtomicSubstitutions: Performing substitution 2 (S -> None)
+AtomicSubstitutions: Initial structure set contains 1 structure(s)
 
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
 1   P1           |              256 |                8
 
-AtomicSubstitutions(): Performing substitution 3 (S -> None)
-AtomicSubstitutions(): Initial structure set contains 8 structure(s)
+AtomicSubstitutions: Performing substitution 3 (S -> None)
+AtomicSubstitutions: Initial structure set contains 8 structure(s)
 
 
-AtomicSubstitutions(): Substituted set contained 248 structure(s)
-AtomicSubstitutions(): Filtering/merging removed 120 structure(s)
+AtomicSubstitutions: Substituted set contained 248 structure(s)
+AtomicSubstitutions: Filtering/merging removed 120 structure(s)
 
    Spacegroup    |   # Structures   |     # Unique    
 ------------------------------------------------------
 3   P2           |              256 |                8
 1   P1           |            7,680 |              120
 
-AtomicSubstitutions(): All substitutions performed.
+AtomicSubstitutions: All substitutions performed.
 
   Substitution   |  # Structures   | sum(Degeneracy) |  Permutations  
 ----------------------------------------------------------------------

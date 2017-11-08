@@ -14,38 +14,22 @@ from Transformer.Utilities import IOHelper;
 # Functions
 # ---------
 
-def RankEnergies(spacegroupGroups, totalEnergyGroups):
-    # Parameter validation.
-
-    if spacegroupGroups == None:
-        raise Exception("Error: spacegroupGroups cannot be None.");
-
+def RankEnergies(totalEnergyGroups):
     if totalEnergyGroups == None:
         raise Exception("Error: totalEnergyGroups cannot be None.");
 
-    for key, (structures, _) in spacegroupGroups.items():
-        if key not in totalEnergyGroups:
-            raise Exception("Error: totalEnergyGroups must have the same keys as spacegroupGroups.");
+    energiesFlat = [];
 
-        if len(totalEnergyGroups[key]) != len(structures):
-            raise Exception("Error: The number of energies in each total-energy group must match the number of structures in the corresponding spacegroup group.");
-
-    # Collapse the dictionaries into a flat list of (sspacegroup, structureNumber, totalEnergy) tuples.
-
-    combined = [];
-
-    for key, (structures, _) in spacegroupGroups.items():
-        combined = combined + [
-            (key, i, totalEnergy) for i, totalEnergy in enumerate(totalEnergyGroups[key])
+    for key, totalEnergies in totalEnergyGroups.items():
+        energiesFlat = energiesFlat + [
+            (key, i, totalEnergy) for i, totalEnergy in enumerate(totalEnergies)
             ];
 
     # Sort by energy, then spacegroup, then structure number.
 
-    combined.sort(key = lambda item : (item[2], item[1], item[0]));
+    energiesFlat.sort(key = lambda item : (item[2], item[1], item[0]));
 
-    # Return sorted data set.
-
-    return combined;
+    return energiesFlat;
 
 def PrintRankedEnergies(rankedEnergies, energyUnits = "eV", maxPrint = None):
     # If maxPrint is set, truncate rankedEnergies if required.

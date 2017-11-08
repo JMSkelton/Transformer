@@ -7,7 +7,7 @@
 
 # Import routines from Transformer.
 
-from Transformer.IO.AIMS import ReadAIMSGeometryFile;
+from Transformer.IO.StructureIO import ReadStructure;
 
 from Transformer.Framework.BatchIO import ExportResultSet;
 from Transformer.Framework.Core import AtomicSubstitutions;
@@ -19,28 +19,28 @@ from Transformer.Framework.Core import AtomicSubstitutions;
 
 # Read the input structure.
 
-structure = ReadAIMSGeometryFile("Cu2ZnSnS4.geometry.in");
+structure = ReadStructure("Cu2ZnSnS4.geometry.in");
 
 # Generate a 2x2x1 supercell (64 atoms).
 
-supercell = structure.GetSupercell((2, 2, 1));
+supercell = structure.GetSupercell(2, 2, 1);
 
 # Generate structures with 1-2 Cu vacancies.
 
-# As far as Transformer is concerned, this is an atomic-substitution problem in which the atom being substituted is being replaced by None (nothing).
+# In Transformer, vacancy creation is simply a substitution problem where atoms are substituted with None (i.e. nothing).
 
 substitutions = [('Cu', None)] * 2;
 
 # Use the AtomicSubstitutions convenience function to generate the defective structures.
 
-_, resultSet = AtomicSubstitutions(
+resultSet = AtomicSubstitutions(
     supercell, substitutions
     );
 
 # Export the results.
 
 ExportResultSet(
-    resultSet, prefix = "CZTS-Cu-Vacancies", workingDirectory = r"Example_CZTS-Vacancies", fileFormat = 'aims'
+    resultSet, prefix = "CZTS-Cu-Vacancies", archiveDirectory = r"Example_CZTS-Vacancies", fileFormat = 'aims'
     );
 
 # Generate structures with a single Zn or Sn defect.
@@ -48,24 +48,24 @@ ExportResultSet(
 for vacancyAtom in 'Zn', 'Sn':
     substitutions = [(vacancyAtom, None)];
 
-    _, resultSet = AtomicSubstitutions(
+    resultSet = AtomicSubstitutions(
         supercell, substitutions
         );
 
     ExportResultSet(
-        resultSet, prefix = r"CZTS-{0}-Vacancy".format(vacancyAtom), workingDirectory = r"Example_CZTS-Vacancies", fileFormat = 'aims'
+        resultSet, prefix = r"CZTS-{0}-Vacancy".format(vacancyAtom), archiveDirectory = r"Example_CZTS-Vacancies", fileFormat = 'aims'
         );
 
 # Generate structures with up to four S vacancies.
 
 substitutions = [('S', None)] * 4;
 
-_, resultSet = AtomicSubstitutions(
+resultSet = AtomicSubstitutions(
     supercell, substitutions
     );
 
 ExportResultSet(
-    resultSet, prefix = r"CZTS-S-Vacancies", workingDirectory = r"Example_CZTS-Vacancies", fileFormat = 'aims'
+    resultSet, prefix = r"CZTS-S-Vacancies", archiveDirectory = r"Example_CZTS-Vacancies", fileFormat = 'aims'
     );
 
 # Generate structures with Schottky defects (i.e. cation vacancies with balanced S vacancies to preserve charge neutrality).
@@ -74,12 +74,12 @@ for cation, numCationVacancies, numAnionVacancies in ('Cu', 2, 1), ('Zn', 1, 1),
     substitutions = [(cation, None)] * numCationVacancies;
     substitutions = substitutions + [('S', None)] * numAnionVacancies;
 
-    # When performing the substitutions, use the storeIntermediate argument to retain only the initial and final sets of structures.
+    # Wrapping the substitution sequence in a list will cause AtomicSubstitutions to treat it as a single operation with respect to generting output structures.
 
-    _, resultSet = AtomicSubstitutions(
-        supercell, substitutions, storeIntermediate = [0, len(substitutions)]
+    resultSet = AtomicSubstitutions(
+        supercell, [substitutions]
         );
 
     ExportResultSet(
-        resultSet, prefix = r"CZTS-{0}-SchottkyDefect".format(cation), workingDirectory = r"Example_CZTS-Vacancies", fileFormat = 'aims'
+        resultSet, prefix = r"CZTS-{0}-SchottkyDefect".format(cation), archiveDirectory = r"Example_CZTS-Vacancies", fileFormat = 'aims'
         );

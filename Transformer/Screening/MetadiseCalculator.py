@@ -11,7 +11,7 @@ import shutil;
 import subprocess;
 import warnings;
 
-from Transformer.IO import VASP;
+from Transformer.IO import StructureIO;
 from Transformer.Screening.TotalEnergyCalculatorBase import TotalEnergyCalculatorBase;
 from Transformer.Utilities import IOHelper;
 
@@ -121,7 +121,7 @@ class MetadiseCalculator(TotalEnergyCalculatorBase):
 
         # Write the structure as a VASP POSCAR file.
 
-        VASP.WritePOSCARFile(
+        StructureIO.WriteStructure(
             structure, os.path.join(tempDirectory, r"POSCAR.vasp"), atomicSymbolLookupTable = atomicSymbolLookupTable
             );
 
