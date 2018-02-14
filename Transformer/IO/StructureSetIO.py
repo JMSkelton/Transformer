@@ -6,8 +6,10 @@
 # -------
 
 import fractions;
+import io;
 import os;
 import re;
+import sys;
 import tarfile;
 import warnings;
 
@@ -15,19 +17,25 @@ from Transformer.IO import StructureIO;
 
 from Transformer.StructureSet import StructureSet;
 
+from Transformer.Utilities import MultiprocessingHelper;
 
-# ---------------------------------
-# StructureSet Batch-Export Routine
-# ---------------------------------
+# Try to import the tqdm module for displaying progress bars in the ImportStructureSet routine.
 
-_ExportStructureSet_TemporaryFileName = r"_ExportTemp.tmp";
+_TQDM = False;
+
+try:
+    import tqdm;
+
+    _TQDM = True;
+except ImportError:
+    pass;
+
+
+# ---------------------------
+# StructureSet Export Routine
+# ---------------------------
 
 def ExportStructureSet(structureSet, archivePath, fileFormat = 'vasp', atomicSymbolLookupTable = None, spacegroupSubfolders = False, normaliseDegeneracies = False):
-    # Check the temporary file is not present.
-
-    if os.path.isfile(_ExportStructureSet_TemporaryFileName):
-        raise Exception("Error: Temporary file \"{0}\" already exists.".format(_ExportStructureSet_TemporaryFileName));
-
     # Check file format is supported and get the default extension.
 
     fileFormat = fileFormat.lower();
@@ -103,46 +111,100 @@ def ExportStructureSet(structureSet, archivePath, fileFormat = 'vasp', atomicSym
                     titleLineTemplate.format(structure.GetChemicalFormula(atomicSymbolLookupTable = atomicSymbolLookupTable), degeneracy)
                     );
 
-                # Write out the structure to a temporary file.
+                # We want to write out the structure and add it to the archive without going via a temporary file, as this is slow and could make the function unsafe for multithreaded use.
+                # To do this, we encode the file text into an in-memory BytesIO stream, which behaves like a file opened in binary ('rb') mode, as required by tarfile.addfile().
 
-                fileName = fileNameTemplate.format(i + 1);
+                fileObj = None;
 
-                StructureIO.WriteStructure(
-                    structure, _ExportStructureSet_TemporaryFileName, fileFormat = fileFormat, atomicSymbolLookupTable = atomicSymbolLookupTable
-                    );
+                if sys.version_info.major < 3:
+                    # In Python 2.x, strings are represented by default in binary (as a bytes object), and can be be written directly into a BytesIO stream.
 
-                archiveFile.add(
-                    _ExportStructureSet_TemporaryFileName, arcname = "{0}/{1}/{2}".format(archiveName, subfolderName, fileName) if subfolderName != None else "{0}/{1}".format(archiveName, fileName)
-                    );
+                    fileObj = io.BytesIO();
 
-                # Delete the temporary file once added to the archive.
+                    StructureIO.WriteStructure(
+                        structure, fileObj, fileFormat = fileFormat, atomicSymbolLookupTable = atomicSymbolLookupTable
+                        );
 
-                os.remove(_ExportStructureSet_TemporaryFileName);
+                    # Seek back to the beginning after writing.
+
+                    fileObj.seek(0);
+                else:
+                    # Newer versions of Python store strings as Unicode objects, which need to be encoded before being written into a binary stream.
+                    # We therefore first compile the file text in a temporary StringIO buffer, then encode the value to unicode and build a BytesIO around the resulting binary data.
+                    # Although this involves holding two copies of the file contents in memory, it's still significantly faster than writing and reading a temporary file.
+
+                    with io.StringIO() as stringBuffer:
+                        StructureIO.WriteStructure(
+                            structure, stringBuffer, fileFormat = fileFormat, atomicSymbolLookupTable = atomicSymbolLookupTable
+                            );
+
+                        fileObj = io.BytesIO(
+                            stringBuffer.getvalue().encode('utf8')
+                            );
+
+                try:
+                    fileName = fileNameTemplate.format(i + 1);
+
+                    fileInfo = tarfile.TarInfo(
+                        name = "{0}/{1}/{2}".format(archiveName, subfolderName, fileName) if subfolderName != None else "{0}/{1}".format(archiveName, fileName)
+                        );
+
+                    fileInfo.size = len(
+                        fileObj.getvalue()
+                        );
+
+                    archiveFile.addfile(
+                        tarinfo = fileInfo, fileobj = fileObj
+                        );
+                finally:
+                    if fileObj != None:
+                        # Release the memory held by the BytesIO stream.
+
+                        fileObj.close();
 
 
-# ---------------------------------
-# StructureSet Batch-Import Routine
-# ---------------------------------
-
-_ImportStructureSet_TemporaryFileName = r"_ImportTemp.tmp";
+# ---------------------------
+# StructureSet Import Routine
+# ---------------------------
 
 _ImportStructureSet_StructureNameRegex = re.compile(r"(?P<chemical_formula>[a-zA-Z0-9]+) \: SG \= (?P<space_group_number>\d+) \((?P<space_group_symbol>[a-zA-Z0-9/_-]+)\)\, (rel\. weight|degeneracy) \= (?P<degeneracy>\d+)");
 
-def ImportStructureSet(filePath, fileFormat = None, atomTypeNumberLookupTable = None):
-    # Check the temporary file is not present.
+def _ImportStructureSet_PerformSymmetryAnalysis(structure):
+    structure.GetSpacegroup();
 
-    if os.path.isfile(_ImportStructureSet_TemporaryFileName):
-        raise Exception("Error: Temporary file \"{0}\" already exists.".format(_ImportStructureSet_TemporaryFileName));
+    return structure;
+
+def ImportStructureSet(filePath, fileFormat = None, atomTypeNumberLookupTable = None, progressBar = False, useMP = False, mpNumProcesses = None):
+    # If progressBar is set and the tqdm module is not available, issue a RuntimeWarning and reset it.
+
+    if progressBar and not _TQDM:
+        warings.warn("The tqdm module could not be imported -> progressBar will be reset to False.", RuntimeWarning);
+
+        progressBar = False;
 
     structures, degeneracies = [], [];
 
     with tarfile.open(filePath, 'r:gz') as archiveFile:
         # Loop over file paths in the archive.
 
-        for archivePath in archiveFile.getnames():
+        members = archiveFile.getmembers();
+
+        iValues = range(0, len(members));
+
+        if progressBar:
+            iValues = tqdm.tqdm(iValues);
+
+        for i in iValues:
+            member = members[i];
+
+            if not member.isfile():
+                # Skip any members that are not files.
+
+                continue;
+
             # Extract the file name from the path.
 
-            _, fileName = os.path.split(archivePath);
+            fileName = os.path.split(member.name)[-1];
 
             # If a file format is not supplied, try to determine one from the file name.
             # If the archive was written using ExportStructureSet(), the default file extensions should have been used, so it shouldn't be necessary to supply a file format.
@@ -150,19 +212,28 @@ def ImportStructureSet(filePath, fileFormat = None, atomTypeNumberLookupTable = 
             fileFormatCurrent = None;
 
             if fileFormat == None:
-                fileFormatCurrent = StructureIO._TryGetFileFormat(fileName);
+                fileFormatCurrent = StructureIO._GetCheckFileFormat(fileName, fileFormat, 'r');
 
-            # Temporarily extract the file to read in.
+            # Extract the file text into an in-memory buffer.
 
-            with archiveFile.extractfile(archivePath) as inputReader:
-                with open(_ImportStructureSet_TemporaryFileName, 'wb') as outputWriter:
-                    outputWriter.write(inputReader.read());
+            stringBuffer = None;
 
-            # Read the structure from the file.
+            # tarfile.extractfile() can only be used with a with statement in newer versions of Python.
+
+            inputReader = archiveFile.extractfile(member.name);
 
             try:
+                stringBuffer = io.StringIO(
+                    inputReader.read().decode('utf8')
+                    );
+            finally:
+                inputReader.close();
+
+            try:
+                # Read the structure from the memory stream.
+
                 structure = StructureIO.ReadStructure(
-                    _ImportStructureSet_TemporaryFileName, fileFormat = fileFormatCurrent, atomTypeNumberLookupTable = atomTypeNumberLookupTable
+                    stringBuffer, fileFormat = fileFormatCurrent, atomTypeNumberLookupTable = atomTypeNumberLookupTable
                     );
 
                 structures.append(structure);
@@ -182,13 +253,14 @@ def ImportStructureSet(filePath, fileFormat = None, atomTypeNumberLookupTable = 
                     else:
                         # For other file formats, the name is written as a comment.
 
-                        with open(_ImportStructureSet_TemporaryFileName, 'r') as inputReader:
-                            for line in inputReader:
-                                match = _ImportStructureSet_StructureNameRegex.search(line);
+                        stringBuffer.seek(0);
 
-                                if match:
-                                    degeneracy = int(match.group('degeneracy'));
-                                    break;
+                        for line in stringBuffer:
+                            match = _ImportStructureSet_StructureNameRegex.search(line);
+
+                            if match:
+                                degeneracy = int(match.group('degeneracy'));
+                                break;
 
                     # If we were able to retrieve a degeneracy, add it to the list.
                     # If not, stop attempting to retrieve them anad issue a warning.
@@ -201,10 +273,18 @@ def ImportStructureSet(filePath, fileFormat = None, atomTypeNumberLookupTable = 
                         degeneracies = None;
 
             finally:
-                # Make sure the temporary file is removed if an error occurs while reading.
+                # Make sure the buffer is disposed of.
 
-                if os.path.isfile(_ImportStructureSet_TemporaryFileName):
-                    os.remove(_ImportStructureSet_TemporaryFileName);
+                if stringBuffer != None:
+                    stringBuffer.close();
+
+    # Constructing a StructureSet object from the list of structures requires a symmetry analysis to be performed on each structure to compute the spacegroups.
+    # We use the QueueMapFunction() in the MultiprocessingHelper module to run through each structure through a dummy _ImportStructureSet_PerformSymmetryAnalysis() function to trigger the symmetry analysis and cache the result.
+    # If useMP is set, the symmetry analyses can be performed in parallel; if not, setting maxNumProcesses = 1 causes QueueMapFunction() to fall back to a serial routine.
+
+    structures = MultiprocessingHelper.QueueMapFunction(
+        _ImportStructureSet_PerformSymmetryAnalysis, structures, maxNumProcesses = mpNumProcesses if useMP else 1, progressBar = progressBar
+        );
 
     # Return the strucutures and degeneracies as a StructureSet object.
     # Since this function expects to read an exported structure set, we skip the initial merging when constructing the set.

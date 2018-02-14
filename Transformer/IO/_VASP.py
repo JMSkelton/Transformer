@@ -18,7 +18,7 @@ from Transformer.Structure import Structure;
 # Functions
 # ---------
 
-def ReadPOSCARFile(filePath, atomTypeNumberLookupTable = None):
+def ReadPOSCARFile(inputReader, atomTypeNumberLookupTable = None):
     # Variables to collect.
 
     systemName = None;
@@ -27,84 +27,83 @@ def ReadPOSCARFile(filePath, atomTypeNumberLookupTable = None):
     atomTypes, atomCounts = None, None;
     coordinateType, atomPositions = None, None;
 
-    with open(filePath, 'r') as inputReader:
-        # Read the system name.
+    # Read the system name.
 
-        systemName = next(inputReader).strip();
+    systemName = next(inputReader).strip();
 
-        # Read the scale factor.
+    # Read the scale factor.
 
-        scaleFactor = float(next(inputReader).strip());
+    scaleFactor = float(next(inputReader).strip());
 
-        # Read the lattice vectors.
+    # Read the lattice vectors.
 
-        latticeVectors = [];
+    latticeVectors = [];
 
-        for i in range(0, 3):
-            latticeVectors.append(
-                [float(element) for element in next(inputReader).strip().split()][:3]
-                );
+    for i in range(0, 3):
+        latticeVectors.append(
+            [float(element) for element in next(inputReader).strip().split()][:3]
+            );
 
-        # Although we sliced the list returned from split(), this does not guarentee that there were at least three elements.
+    # Although we sliced the list returned from split(), this does not guarentee that there were at least three elements.
 
-        for latticeVector in latticeVectors:
-            if len(latticeVector) != 3:
-                raise Exception("Error: Lattice vector specification in VASP POSCAR file \"{0}\" is invalid.".format(filePath));
+    for latticeVector in latticeVectors:
+        if len(latticeVector) != 3:
+            raise Exception("Error: The lattice vector specification in the supplied VASP POSCAR file is invalid.");
 
-        # Read the atom types and/or atom counts.
+    # Read the atom types and/or atom counts.
 
-        atomTypes = [element for element in next(inputReader).strip().split()];
+    atomTypes = [element for element in next(inputReader).strip().split()];
 
-        atomCounts = None;
+    atomCounts = None;
 
-        if atomTypes[0].isdigit():
-            atomCounts = [int(item) for item in atomTypes];
-            atomTypes = None;
-        else:
-            atomCounts = [int(element) for element in next(inputReader).strip().split()];
+    if atomTypes[0].isdigit():
+        atomCounts = [int(item) for item in atomTypes];
+        atomTypes = None;
+    else:
+        atomCounts = [int(element) for element in next(inputReader).strip().split()];
 
-        # If atom types were given in the file, check the number of atom types listed is consistent with the number of atom counts.
+    # If atom types were given in the file, check the number of atom types listed is consistent with the number of atom counts.
 
-        if atomTypes != None and len(atomTypes) != len(atomCounts):
-            raise Exception("Error: The atom-type and atom-count lines in VASP POSCAR file \"{0}\" contain different numbers of entries.".format(filePath));
+    if atomTypes != None and len(atomTypes) != len(atomCounts):
+        raise Exception("Error: The atom-type and atom-count lines in the supplied VASP POSCAR file contain different numbers of entries.");
 
-        # Read the coordinate type.
+    # Read the coordinate type.
 
-        coordinateType = None;
+    coordinateType = None;
 
+    keyword = next(inputReader).strip().lower();
+
+    # Check for and skip the "selective dynamics" keyword.
+
+    if keyword[0] == "s":
         keyword = next(inputReader).strip().lower();
 
-        # Check for and skip the "selective dynamics" keyword.
+    if keyword[0] == 'd':
+        coordinateType = 'd';
+    elif keyword[0] == 'c' or keyword[0] == 'k':
+        coordinateType = 'c';
+    else:
+        raise Exception("Error: The coordinate-type line in the supplied VASP POSCAR file contains an unexpected keyword.");
 
-        if keyword[0] == "s":
-            keyword = next(inputReader).strip().lower();
+    # Read the atom positions.
 
-        if keyword[0] == 'd':
-            coordinateType = 'd';
-        elif keyword[0] == 'c' or keyword[0] == 'k':
-            coordinateType = 'c';
-        else:
-            raise Exception("Error: The coordinate-type line in VASP POSCAR file \"{0}\" contains an unexpected keyword.".format(filePath));
+    totalAtomCount = 0;
 
-        # Read the atom positions.
+    for atomCount in atomCounts:
+        totalAtomCount = totalAtomCount + atomCount;
 
-        totalAtomCount = 0;
+    atomPositions = [];
 
-        for atomCount in atomCounts:
-            totalAtomCount = totalAtomCount + atomCount;
+    for i in range(0, totalAtomCount):
+        elements = next(inputReader).strip().split();
 
-        atomPositions = [];
+        atomPositions.append(
+            [float(element) for element in elements[:3]]
+            );
 
-        for i in range(0, totalAtomCount):
-            elements = next(inputReader).strip().split();
-
-            atomPositions.append(
-                [float(element) for element in elements[:3]]
-                );
-
-        for atomPosition in atomPositions:
-            if len(atomPosition) != 3:
-                raise Exception("Error: Atomic position specification in VASP POSCAR file \"{0}\" is invalid.".format(filePath));
+    for atomPosition in atomPositions:
+        if len(atomPosition) != 3:
+            raise Exception("Error: One or more atomic position specifications in the supplied VASP POSCAR file is invalid.");
 
     # If a scale factor other than 1 has been set, adjust the lattice vectors.
 
@@ -146,40 +145,39 @@ def ReadPOSCARFile(filePath, atomTypeNumberLookupTable = None):
 
     return Structure(latticeVectors, atomPositions, atomTypeNumbers, name = systemName);
 
-def WritePOSCARFile(structure, filePath, atomicSymbolLookupTable = None):
-    with open(filePath, 'w') as outputWriter:
-        # Write the system name; Structure.GetName() returns a sensible default value if a name is not set.
+def WritePOSCARFile(structure, outputWriter, atomicSymbolLookupTable = None):
+    # Write the system name; Structure.GetName() returns a sensible default value if a name is not set.
 
-        outputWriter.write("{0}\n".format(structure.GetName()));
+    outputWriter.write("{0}\n".format(structure.GetName()));
 
-        # Write the scale factor.
+    # Write the scale factor.
 
-        outputWriter.write("  {0: >19.16f}\n".format(1.0));
+    outputWriter.write("  {0: >19.16f}\n".format(1.0));
 
-        # Write the lattice vectors.
+    # Write the lattice vectors.
 
-        for ax, ay, az in structure.GetLatticeVectors():
-            outputWriter.write("  {0: >21.16f}  {1: >21.16f} {2: >21.16f}\n".format(ax, ay, az));
+    for ax, ay, az in structure.GetLatticeVectors():
+        outputWriter.write("  {0: >21.16f}  {1: >21.16f}  {2: >21.16f}\n".format(ax, ay, az));
 
-        # Write the atom types and counts.
+    # Write the atom types and counts.
 
-        atomicSymbols, atomCounts = structure.GetAtomicSymbolsCounts(atomicSymbolLookupTable = atomicSymbolLookupTable);
+    atomicSymbols, atomCounts = structure.GetAtomicSymbolsCounts(atomicSymbolLookupTable = atomicSymbolLookupTable);
 
-        for atomicSymbol in atomicSymbols:
-            outputWriter.write("  {0: >3}".format(atomicSymbol));
+    for atomicSymbol in atomicSymbols:
+        outputWriter.write("  {0: >3}".format(atomicSymbol));
 
-        outputWriter.write("\n");
+    outputWriter.write("\n");
 
-        for atomCount in atomCounts:
-            outputWriter.write("  {0: >3}".format(atomCount));
+    for atomCount in atomCounts:
+        outputWriter.write("  {0: >3}".format(atomCount));
 
-        outputWriter.write("\n");
+    outputWriter.write("\n");
 
-        # Write the coordinate type.
+    # Write the coordinate type.
 
-        outputWriter.write("Direct\n");
+    outputWriter.write("Direct\n");
 
-        # Write the atom positions.
+    # Write the atom positions.
 
-        for x, y, z in structure.GetAtomPositions():
-            outputWriter.write("  {0: >21.16f}  {1: >21.16f} {2: >21.16f}\n".format(x, y, z));
+    for x, y, z in structure.GetAtomPositions():
+        outputWriter.write("  {0: >21.16f}  {1: >21.16f}  {2: >21.16f}\n".format(x, y, z));

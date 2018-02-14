@@ -30,7 +30,7 @@ def ClearDirectory(directoryPath, removeSubdirectories = False):
             shutil.rmtree(absPath);
 
 def OpenForCSVWriter(filePath):
-    # If running on Windows, try to open the file with newline = '' set (Python >= 3) to stop the csv module inserting extra blank lines
+    # If running on Windows, try to open the file with newline = '' set (Python >= 3) to stop the csv module inserting extra blank lines.
     # If this is not possible, issue a RuntimeWarning.
 
     if sys.platform.startswith("win"):

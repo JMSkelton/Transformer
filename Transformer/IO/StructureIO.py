@@ -5,6 +5,8 @@
 # Imports
 # -------
 
+import os;
+
 from Transformer.IO import _AIMS, _VASP;
 
 
@@ -24,76 +26,139 @@ SupportedFileFormats = [
 # Public Functions
 # ----------------
 
-def ReadStructure(filePath, fileFormat = None, atomTypeNumberLookupTable = None):
-    if fileFormat == None:
-        # If a file format is not supplied, try and determine one from the file path.
+def GetFileTypeFromExtension(filePath):
+    fileFormat = _TryGetFileFormat(filePath);
 
-        fileFormat = _TryGetFileFormat(filePath);
+    for supportedFileFormat, defaultExtension, _, _ in SupportedFileFormats:
+        if fileFormat == supportedFileFormat:
+            return (fileFormat, defaultExtension);
+
+def ReadStructure(filePathOrObj, fileFormat = None, atomTypeNumberLookupTable = None):
+    # _GetCheckFileFormat() attempts to automatically determine a file format if one is not supplied, and also checks the format is supported for reading.
+
+    fileFormat = _GetCheckFileFormat(filePathOrObj, fileFormat, mode = 'r');
+
+    # File-like object to read from.
+
+    fileObj = None;
+
+    # Variable to keep track of whether fileObj was opened within this routine.
+
+    fileObjOpened = False;
+
+    # If filePathOrObj is a string, assume it specifies a file path and set fileObj to an open file for reading.
+    # If not, assume filePathOrObj implements a file-like interface and use as is.
+
+    if isinstance(filePathOrObj, str):
+        fileObj = open(filePathOrObj, 'r');
+        fileObjOpened = True;
     else:
-        # If one is, convert it to lower case to match the convention in SupportedFileFormats.
+        fileObj = filePathOrObj;
 
-        fileFormat = fileFormat.lower();
+    try:
+        # Dispatch to different reader functions depending on the selected file format.
 
-    # Check the selected file format is supported for reading.
+        if fileFormat == 'aims':
+            return _AIMS.ReadGeometryInFile(
+                fileObj, atomTypeNumberLookupTable = atomTypeNumberLookupTable
+                );
 
-    for supportedFileFormat, _, readSupport, _ in SupportedFileFormats:
-        if fileFormat == supportedFileFormat and not readSupport:
-            raise Exception("Error: File format '{0}' is not supported for reading.".format(fileFormat));
+        elif fileFormat == 'vasp':
+            return _VASP.ReadPOSCARFile(
+                fileObj, atomTypeNumberLookupTable = atomTypeNumberLookupTable
+                );
 
-    # Dispatch to different reader functions depending on the selected file format.
+        else:
+            # Catch-all, just in case.
 
-    if fileFormat == 'aims':
-        return _AIMS.ReadGeometryInFile(filePath, atomTypeNumberLookupTable = atomTypeNumberLookupTable);
+            raise NotImplementedError("Error: An import routine for the file format '{0}' has not yet been implemented.".format(fileFormat));
 
-    elif fileFormat == 'vasp':
-        return _VASP.ReadPOSCARFile(filePath, atomTypeNumberLookupTable = atomTypeNumberLookupTable);
+    finally:
+        # If we opened a file, make sure it gets closed.
 
+        if fileObjOpened:
+            fileObj.close();
+
+def WriteStructure(structure, filePathOrObj, fileFormat = None, atomicSymbolLookupTable = None):
+    # Determine and/or check the file format is supported for writing.
+
+    fileFormat = _GetCheckFileFormat(filePathOrObj, fileFormat, mode = 'w');
+
+    # If required, set up a file-like object to write to.
+
+    fileObj = None;
+    fileObjOpened = False;
+
+    if isinstance(filePathOrObj, str):
+        fileObj = open(filePathOrObj, 'w');
+        fileObjOpened = True;
     else:
-        # Catch-all, just in case.
-
-        raise NotImplementedError("Error: An import routine for the file format '{0}' has not yet been implemented.".format(fileFormat));
-
-def WriteStructure(structure, filePath, fileFormat = None, atomicSymbolLookupTable = None):
-    # Determine/lower case fileFormat.
-
-    if fileFormat == None:
-        fileFormat = _TryGetFileFormat(filePath);
-    else:
-        fileFormat = fileFormat.lower();
-
-    # Check the format is supported for writing.
-
-    for supportedFileFormat, _, _, writeSupport in SupportedFileFormats:
-        if fileFormat == supportedFileFormat and not writeSupport:
-            raise Exception("Error: File format '{0}' is not supported for writing.".format(fileFormat));
+        fileObj = filePathOrObj;
 
     # Dispatch to the appropriate writer function.
 
-    if fileFormat == 'aims':
-        _AIMS.WriteGeometryInFile(
-            structure, filePath, atomicSymbolLookupTable = atomicSymbolLookupTable
-            );
+    try:
+        if fileFormat == 'aims':
+            _AIMS.WriteGeometryInFile(
+                structure, fileObj, atomicSymbolLookupTable = atomicSymbolLookupTable
+                );
 
-    elif fileFormat == 'vasp':
-        _VASP.WritePOSCARFile(
-            structure, filePath, atomicSymbolLookupTable = atomicSymbolLookupTable
-            );
+        elif fileFormat == 'vasp':
+            _VASP.WritePOSCARFile(
+                structure, fileObj, atomicSymbolLookupTable = atomicSymbolLookupTable
+                );
 
-    else:
-        raise NotImplementedError("Error: An export routine for the file format '{0}' has not yet been implemented.".format(fileFormat));
+        else:
+            raise NotImplementedError("Error: An export routine for the file format '{0}' has not yet been implemented.".format(fileFormat));
+
+    finally:
+        if fileObjOpened:
+            fileObj.close();
 
 
 # -----------------
 # Utility Functions
 # -----------------
 
-def _TryGetFileFormat(filePath):
-    # Check filePath against the default extensions for the supported file types listed in SupportedFileFormats.
+def _GetCheckFileFormat(filePathOrObj, fileFormat, mode):
+    if fileFormat == None:
+        # If filePathOrObj is a string, assume it specifies a file path and match the ending against the default extensions of the formats listed in SupportedFileFormats.
 
-    for supportedFileFormat, defaultExtension, _, _ in SupportedFileFormats:
-        if filePath.lower().endswith(defaultExtension):
-            return supportedFileFormat;
+        if isinstance(filePathOrObj, str):
+            _, tail = os.path.split(filePathOrObj);
 
-    # If the file type cannot be determined, raise an error.
+            tail = tail.lower();
 
-    raise Exception("Error: A file format could not be determined from the file path.");
+            for supportedFileFormat, defaultExtension, _, _ in SupportedFileFormats:
+                if tail.endswith(defaultExtension):
+                    fileFormat = supportedFileFormat;
+
+        # If we were unable to determine a file format automatically, throw an error.
+
+        if fileFormat == None:
+            raise Exception("Error: A file format could not be automatically determined.");
+    else:
+        fileFormat = fileFormat.lower();
+
+    # Check the file format is supported for the desired mode.
+
+    if mode == 'r':
+        # Check for reading support.
+
+        for supportedFileFormat, _, readSupport, _ in SupportedFileFormats:
+            if fileFormat == supportedFileFormat and not readSupport:
+                raise Exception("Error: File format '{0}' is not supported for reading.".format(fileFormat));
+    elif mode == 'w':
+        # Check for writing support.
+
+        for supportedFileFormat, _, _, writeSupport in SupportedFileFormats:
+            if fileFormat == supportedFileFormat and not writeSupport:
+                raise Exception("Error: File format '{0}' is not supported for writing.".format(fileFormat));
+    else:
+        # Catch all - should only be for debugging purposes.
+
+        raise Exception("Error: Unknown mode '{0}'.".format(mode))
+
+    # Return the file format.
+
+    return fileFormat;

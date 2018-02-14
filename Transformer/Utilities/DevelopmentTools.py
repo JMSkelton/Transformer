@@ -9,17 +9,6 @@ import numpy as np;
 
 from Transformer import StructureSet;
 
-# If available, import the Cython-optimised merging routines from the _StructureSet module.
-
-_Cython = False;
-
-try:
-    from Transformer import _StructureSet;
-
-    _Cython = True;
-except ImportError:
-    pass;
-
 from Transformer.Structure import Structure;
 
 
@@ -27,7 +16,7 @@ from Transformer.Structure import Structure;
 # Functions
 # ---------
 
-def MapResultSetStructures(parentStructure, structures1, structures2, compareLatticeVectors = True, compareAtomTypes = True, tolerance = None):
+def MapStructures(parentStructure, structures1, structures2, tolerance = None):
     # If tolerance is not set, set it to the default from the Structure class.
 
     if tolerance == None:
@@ -36,6 +25,12 @@ def MapResultSetStructures(parentStructure, structures1, structures2, compareLat
     # Take the symmetry operations from the parent structure.
 
     parentSymmetryOperations = parentStructure.GetSymmetryOperations();
+
+    # Cache symmetry expansions of the second set of structures for efficiency.
+
+    symmetryExpansionsCache = [
+        None for _ in range(0, len(structures2))
+        ];
 
     # Map structures in the first result set to those in the second.
 
@@ -46,11 +41,11 @@ def MapResultSetStructures(parentStructure, structures1, structures2, compareLat
 
         # Range of atom indices to compare positions over.
 
-        indexRange = [(0, refAtomCount)];
+        indexRanges = [(0, refAtomCount)];
 
-        # Expand the reference structure to a set of comparison structures by applying the parent symmetry operations.
+        # Expand the reference structure with the parent symmetry operations.
 
-        comparePositions = None;
+        refTransformedPositions = None;
 
         # Compare the transformed structures to each structure in the second result set.
 
@@ -63,39 +58,54 @@ def MapResultSetStructures(parentStructure, structures1, structures2, compareLat
 
             # Depending on whether compareLatticeVectors/compareAtomTypes are set, compare the lattice vectors and/or atom-type numbers.
 
-            if equivalent and compareLatticeVectors:
-                equivalent = refStructure.CompareLatticeVectors(compareStructure, tolerance = tolerance);
+            if equivalent:
+                latticeVectors1 = refStructure.GetLatticeVectorsNumPy(copy = False);
+                latticeVectors2 = compareStructure.GetLatticeVectorsNumPy(copy = False);
 
-            if equivalent and compareAtomTypes:
-                equivalent = refStructure.CompareAtomTypeNumbers(compareStructure);
-
-            # Compare the atom positions in structure to the set of symmetry-transformed positions in comparePositions.
+                equivalent = np.all(np.abs(latticeVectors1 - latticeVectors2) < tolerance);
 
             if equivalent:
-                # Lazy initialisation of comparePositions.
+                atomTypeNumbers1 = refStructure.GetAtomTypeNumbersNumPy(copy = False);
+                atomTypeNumbers2 = compareStructure.GetAtomTypeNumbersNumPy(copy = False);
 
-                if comparePositions is None:
-                    # If possible, use the Cython-optimised symmetry-transformation routine.
+                equivalent = (atomTypeNumbers1 == atomTypeNumbers2).all();
 
-                    if _Cython:
-                        comparePositions = _StructureSet._GenerateSymmetryTransformedPositions(
-                            refStructure, parentSymmetryOperations, tolerance
-                            );
-                    else:
-                        comparePositions = StructureSet._GenerateSymmetryTransformedPositions(
-                            refStructure, parentSymmetryOperations, tolerance
-                            );
+            # Compare the atom positions.
 
-                if _Cython:
-                    # If possible, use the Cython-optimised comparison routine.
+            if equivalent:
+                # Lazy initialisation of refTransformedPositions.
 
-                    equivalent = _StructureSet._CompareAtomPositions(
-                        compareStructure.GetAtomPositionsNumPy(copy = False), comparePositions, tolerance, indexRange
+                if refTransformedPositions is None:
+                    refTransformedPositions = StructureSet._GenerateSymmetryExpandedPositions(
+                        refStructure, parentSymmetryOperations, tolerance
                         );
-                else:
-                    equivalent = StructureSet._CompareAtomPositions(
-                        compareStructure.GetAtomPositionsNumPy(copy = False), comparePositions, tolerance, indexRange
-                        );
+
+                # Compare the atom positions in compareStructure to the set of symmetry-expanded reference positions.
+
+                equivalent = StructureSet._CompareAtomPositions(
+                    compareStructure.GetAtomPositionsNumPy(copy = False), refTransformedPositions, tolerance, indexRanges
+                    );
+
+                if not equivalent:
+                    # If we have already generated the symmetry-expanded positions for compareStructure, take them from the cache.
+                    # If not, generate and cache them.
+
+                    if symmetryExpansionsCache[j] is None:
+                        symmetryExpansionsCache[j] = StructureSet._GenerateSymmetryExpandedPositions(
+                            compareStructure, parentSymmetryOperations, tolerance
+                            );
+
+                    compareTransformedPositions = symmetryExpansionsCache[j];
+
+                    # Compare each set of symmetry-expanded positions for compareStructure with the symmetry-expanded reference positions.
+
+                    for comparePositions in compareTransformedPositions:
+                        equivalent = StructureSet._CompareAtomPositions(
+                            comparePositions, refTransformedPositions, tolerance, indexRanges
+                            );
+
+                        if equivalent:
+                            break;
 
             if equivalent:
                 indices.append(j);

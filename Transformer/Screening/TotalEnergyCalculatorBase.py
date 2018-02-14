@@ -45,9 +45,10 @@ class TotalEnergyCalculatorBase(object):
 
     def __init__(self, tempDirectory = None, useMP = False, mpNumProcesses = None):
         # If tempDir is not set, set it to the default value.
+        # This includes the PID of the current process to (hopefully!) make it unique.
 
         if tempDirectory == None:
-            tempDirectory = TotalEnergyCalculatorBase.DefaultTempDirectory;
+            tempDirectory = TotalEnergyCalculatorBase.DefaultTempDirectory.replace("<PID>", str(os.getpid()));
 
         # If useMP is set and mpNumProcesses is not supplied, set it to the CPU count.
 
@@ -81,7 +82,7 @@ class TotalEnergyCalculatorBase(object):
                 # If we are using multiple worker processes, use the base directory with an appended process number.
 
                 tempDirectories = [
-                    r"{0}_Process-{1:0>3}".format(tempDirectoryBase, i + 1)
+                    r"{0}.{1}".format(tempDirectoryBase, i + 1)
                         for i in range(0, numWorkerProcesses)
                     ];
 
@@ -165,72 +166,18 @@ class TotalEnergyCalculatorBase(object):
 
         tempDirectories = self._CreateTempDirectories(numWorkerProcesses = numWorkerProcesses);
 
-        # Queue to pass structures to the worker processes.
+        # Initialise Mapper objects for use with the QueueMap() routine from the MultiprocessingHelper module.
 
-        inputQueue = multiprocessing.Queue();
-
-        # Queue for the worker processes to return calculated energies.
-
-        outputQueue = multiprocessing.Queue();
-
-        # Shared-memory flag to signal worker processes to terminate.
-
-        terminateFlag = multiprocessing.Value('B', 0);
-
-        # Create and start worker processes.
-
-        workerProcesses = [
-            multiprocessing.Process(target = self._CalculateTotalEnergiesMP_ProcessMain, args = (tempDirectories[i] if tempDirectories != None else None, raiseOnError, inputQueue, outputQueue))
-                for i in range(0, numWorkerProcesses)
+        mappers = [
+            _CalculateTotalEnergiesMP_Mapper(self, raiseOnError, tempDirectory)
+                for tempDirectory in tempDirectories
             ];
 
-        for workerProcess in workerProcesses:
-            workerProcess.start();
+        # Calculate total energies.
 
-        # Load the input queue with (index, structure, degeneracy) tuples.
-
-        for i, (structure, degeneracy) in enumerate(zip(structures, degeneracies)):
-            inputQueue.put(
-                (i, structure, degeneracy)
-                );
-
-        numStructures = len(structures);
-
-        # Create a list to hold the total energies.
-
-        totalEnergies = [None] * numStructures;
-
-        # Fetch items from the output queue as they become available.
-
-        iValues = range(0, numStructures);
-
-        # If progressBar is set and the tqdm module is available, wrap the iterator in a tqdm progress bar.
-
-        progressBar = progressBar and _TQDM;
-
-        if progressBar:
-            iValues = tqdm.tqdm(iValues);
-
-        for i in iValues:
-            while True:
-                try:
-                    index, totalEnergy = outputQueue.get(block = False);
-                    totalEnergies[index] = totalEnergy;
-
-                    break;
-
-                except Empty:
-                    time.sleep(TotalEnergyCalculatorBase._CalculateTotalEnergiesMP_PollDelay);
-
-        # Terminate the worker processes.
-
-        for workerProcess in workerProcesses:
-            workerProcess.terminate();
-
-        # If a tqdm progress bar was displayed, print a blank line.
-
-        if progressBar:
-            print("");
+        totalEnergies = MultiprocessingHelper.QueueMap(
+            [item for item in zip(structures, degeneracies)], mappers, progressBar = progressBar
+            );
 
         # Remove the temporary directories.
 
@@ -241,26 +188,6 @@ class TotalEnergyCalculatorBase(object):
         # Return the calculated total energies.
 
         return totalEnergies;
-
-    def _CalculateTotalEnergiesMP_ProcessMain(self, tempDirectory, raiseOnError, inputQueue, outputQueue):
-        while True:
-            # Try to fetch an index, structure and degeneracy from the input queue; if none is available, sleep for a delay and try again.
-
-            try:
-                index, structure, degeneracy = inputQueue.get(block = False);
-
-                # Calculate total energy.
-
-                totalEnergy = self._GetTotalEnergy(structure, degeneracy, raiseOnError = raiseOnError, tempDirectory = tempDirectory);
-
-                # Place the result in the output queue.
-
-                outputQueue.put(
-                    (index, totalEnergy)
-                    );
-
-            except Empty:
-                time.sleep(TotalEnergyCalculatorBase._CalculateTotalEnergiesMP_PollDelay);
 
     # --------------
     # Pubilc Methods
@@ -371,5 +298,25 @@ class TotalEnergyCalculatorBase(object):
     # -------------
 
     _CalculateTotalEnergiesMP_PollDelay = 0.1;
+    _CalculateTotalEnergiesMP_QueueBurstFactor = 100;
 
-    DefaultTempDirectory = "_CalculatorTemp";
+    DefaultTempDirectory = "_CalculatorTemp.<PID>";
+
+
+# --------------------------------------
+# _CalculateTotalEnergiesMP_Mapper Class
+# --------------------------------------
+
+class _CalculateTotalEnergiesMP_Mapper(MultiprocessingHelper.MapperBase):
+    def __init__(self, totalEnergyCalculator, raiseOnError, tempDirectory):
+        self._totalEnergyCalculator = totalEnergyCalculator;
+
+        self._raiseOnError = raiseOnError;
+        self._tempDirectory = tempDirectory;
+
+    def Map(self, arg):
+        structure, degeneracy = arg;
+
+        return self._totalEnergyCalculator._GetTotalEnergy(
+            structure, degeneracy, raiseOnError = self._raiseOnError, tempDirectory = self._tempDirectory
+            );

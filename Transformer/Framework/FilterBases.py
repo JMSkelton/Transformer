@@ -241,3 +241,122 @@ class CoverageFilterBase(FilterBase):
     # -------------
 
     CoverageLevels = ['low', 'medium', 'full'];
+
+
+# -----------------------
+# RankingFilterBase Class
+# -----------------------
+
+class RankingFilterBase(CoverageFilterBase):
+    # -----------
+    # Constructor
+    # -----------
+
+    def __init__(self, coverage = 'full', cutoffMode = 'percentage', cutoff = 100):
+        # Call the base class constructor.
+
+        super(RankingFilterBase, self).__init__(coverage = coverage);
+
+        # Validate and store cutoff settings.
+
+        cutoffMode = cutoffMode.lower();
+
+        if cutoffMode not in ['percentage', 'number']:
+            raise Exception("Error: Unknown cutoff mode '{0}'.".format(cutoffMode));
+
+        if cutoffMode == 'percentage' and (cutoff <= 0.0 or cutoff > 100.0):
+                raise Exception("Error: For the 'percentage' ranking mode, cutoff should be > 0 and < 100.");
+        elif cutoffMode == 'number':
+            cutoff = int(cutoff);
+
+            if cutoff <= 0:
+                raise Exception("Error: For the 'number' ranking mode, cutoff should be > 0.");
+
+        self._cutoffMode = cutoffMode;
+        self._cutoff = cutoff;
+
+    # -------
+    # Methods
+    # -------
+
+    def IsMPSafe(self):
+        return True;
+
+    def CalculateScores(self, structureSet):
+        raise Exception("Error: CalculateScores() must be overridden in derived classes.");
+
+    def FinaliseMergedStructureSet(self, structureSet):
+        # Call the base class method to update the structure set according to the coverage level (if required).
+
+        super(RankingFilterBase, self).FinaliseMergedStructureSet(structureSet);
+
+        # Pass the structure set to the virtual CalculateScores() method to score the structures.
+
+        scores = self.CalculateScores(structureSet);
+
+        # Rank the structures.
+
+        scoresFlat = [];
+
+        for spacegroup in scores.keys():
+            for i, score in enumerate(scores[spacegroup]):
+                scoresFlat.append(
+                    (spacegroup, i, score)
+                    );
+
+        scoresFlat.sort(key = lambda item : item[2]);
+
+        # Obtain the index at which to split the ranked structures into keep and remove sets.
+
+        splitIndex = None;
+
+        cutoffMode, cutoff = self._cutoffMode, self._cutoff;
+
+        if cutoffMode == 'percentage':
+            splitIndex = round(
+                (cutoff / 100.0) * len(scoresFlat)
+                );
+
+            splitIndex = max(int(splitIndex), 1);
+
+        elif cutoffMode == 'number':
+            splitIndex = min(cutoff, len(scoresFlat));
+
+        # Collect a dictionary of structures to remove.
+
+        removeIndices = { };
+
+        for spacegroup, structureNumber, _ in scoresFlat[splitIndex:]:
+            if spacegroup not in removeIndices:
+                removeIndices[spacegroup] = [];
+
+            removeIndices[spacegroup].append(structureNumber);
+
+        # If the coverage setting requires filtered structures, copy them into a new structure set and pass it to the base class SetFilteredStructureSet() method.
+
+        if self.RequiresFilteredStructures():
+            structureSetDict = structureSet.GetStructureSet();
+
+            filteredStructures, filteredDegeneracies = [], [];
+
+            for spacegroup, indices in removeIndices.items():
+                structures, degeneracies = structureSetDict[spacegroup];
+
+                filteredStructures = filteredStructures + [structures[index] for index in indices];
+                filteredDegeneracies = filteredDegeneracies + [degeneracies[index] for index in indices];
+
+            removedStructures = structureSet.CloneNew(
+                structures = filteredStructures, degeneracies = filteredDegeneracies, noInitialMerge = True
+                );
+
+            self.SetFilteredStructureSet(removedStructures);
+
+        # Remove the marked structures from the current set.
+
+        structureSet.Remove(removeIndices);
+
+    # -------------
+    # Static Fields
+    # -------------
+
+    CutoffModes = ['percentage', 'number'];

@@ -16,37 +16,46 @@ from Transformer.Structure import Structure;
 # Functions
 # ---------
 
-def ReadGeometryInFile(filePath, atomTypeNumberLookupTable = None):
+def ReadGeometryInFile(inputReader, atomTypeNumberLookupTable = None):
     # Variables to collect.
 
     latticeVectors = [];
     atomPositions, atomicSymbols = [], [];
 
-    with open(filePath, 'r') as inputReader:
-        # Read the file and parse and store lattice_vector and atom keyword entries.
+    # Read and parse the file.
 
-        for line in inputReader:
-            # Strip whitespace.
+    atomPositionsTemp = [];
 
-            line = line.strip();
+    for line in inputReader:
+        # Strip whitespace.
 
-            # Strip comments, if present.
+        line = line.strip();
 
-            if '#' in line:
-                line = line[:line.find('#')];
+        # Strip comments, if present.
 
-            # Test for and parse lattice_vector and atom keywords.
+        if '#' in line:
+            line = line[:line.find('#')];
 
-            if len(line) > 14 and line[:14].lower() == "lattice_vector":
+        # Test for and parse lattice_vector and atom[_frac] keywords.
+
+        elements = line.split();
+
+        if len(elements) > 0:
+            keyword = elements[0].lower();
+
+            if keyword == "lattice_vector":
                 latticeVectors.append(
-                    [float(element) for element in line.split()[1:4]]
+                    [float(element) for element in elements[1:4]]
                     );
 
-            elif len(line) > 4 and line[:4].lower() == "atom":
-                elements = line.split();
+            elif keyword == "atom" or keyword == "atom_frac":
+                atomPosition = [float(element) for element in elements[1:4]];
 
-                atomPositions.append(
-                    [float(element) for element in elements[1:4]]
+                # Temporarily record the atom positions along with a tag indicating whether they are in fractional coordinates.
+                # This is because we may not have the lattice vectors to convert Cartesian positions until we have finished parsing.
+
+                atomPositionsTemp.append(
+                    (atomPosition, keyword == "atom_frac")
                     );
 
                 atomicSymbols.append(elements[4]);
@@ -54,14 +63,18 @@ def ReadGeometryInFile(filePath, atomTypeNumberLookupTable = None):
     # Sanity checks.
 
     if len(latticeVectors) != 3:
-        raise Exception("Error: Incorrect number of lattice_vector keywords in AIMS geometry file \"{0}\".".format(filePath));
+        raise Exception("Error: An incorrect number of lattice_vector keywords were found in the supplied AIMS geometry file");
 
-    if len(atomPositions) == 0:
-        raise Exception("Error: No atom positions/atomic symbols found in AIMS geometry file \"{0}\" - this may be because this function only currently supports the 'atom' keyword.".format(filePath));
+    if len(atomPositionsTemp) == 0:
+        raise Exception("Error: No atom positions/atomic symbols found in the supplied AIMS geometry file.");
 
-    # Convert the atom positions from Cartesian to fractional coordinates.
+    # Convert any atom positions specified in Cartesian coordinates to fractional coordinates.
 
-    atomPositions = StructureTools.CartesianToFractionalCoordinates(latticeVectors, atomPositions);
+    for atomPosition, isFractional in atomPositionsTemp:
+        if not isFractional:
+            atomPosition = StructureTools.CartesianToFractionalCoordinates(latticeVectors, [atomPosition])[0];
+
+        atomPositions.append(atomPosition);
 
     # Convert the atomic symbols to atom-type numbers.
 
@@ -71,28 +84,27 @@ def ReadGeometryInFile(filePath, atomTypeNumberLookupTable = None):
 
     return Structure(latticeVectors, atomPositions, atomTypeNumbers);
 
-def WriteGeometryInFile(structure, filePath, atomicSymbolLookupTable = None):
-    with open(filePath, 'w') as outputWriter:
-        # Write the structure name as a comment.
+def WriteGeometryInFile(structure, outputWriter, atomicSymbolLookupTable = None):
+    # Write the structure name as a comment.
 
-        outputWriter.write("# {0}\n".format(structure.GetName()));
+    outputWriter.write("# {0}\n".format(structure.GetName()));
 
-        # Write the lattice vectors.
+    # Write the lattice vectors.
 
-        for ax, ay, az in structure.GetLatticeVectors():
-            outputWriter.write("lattice_vector {0: >15.8f} {1: >15.8f} {2: >15.8f}\n".format(ax, ay, az));
+    for ax, ay, az in structure.GetLatticeVectors():
+        outputWriter.write("lattice_vector {0: >15.8f} {1: >15.8f} {2: >15.8f}\n".format(ax, ay, az));
 
-        # Write the atom positions and types.
+    # Write the atom positions and types.
 
-        atomicSymbols, atomCounts = structure.GetAtomicSymbolsCounts(atomicSymbolLookupTable = atomicSymbolLookupTable);
+    atomicSymbols, atomCounts = structure.GetAtomicSymbolsCounts(atomicSymbolLookupTable = atomicSymbolLookupTable);
 
-        atomPositions = structure.GetAtomPositionsCartesian();
+    atomPositions = structure.GetAtomPositionsCartesian();
 
-        atomPositionsPointer = 0;
+    atomPositionsPointer = 0;
 
-        for atomicSymbol, atomCount in zip(atomicSymbols, atomCounts):
-            for i in range(0, atomCount):
-                x, y, z = atomPositions[atomPositionsPointer];
-                outputWriter.write("atom  {0: >15.8f} {1: >15.8f} {2: >15.8f} {3}\n".format(x, y, z, atomicSymbol))
+    for atomicSymbol, atomCount in zip(atomicSymbols, atomCounts):
+        for i in range(0, atomCount):
+            x, y, z = atomPositions[atomPositionsPointer];
+            outputWriter.write("atom  {0: >15.8f} {1: >15.8f} {2: >15.8f} {3}\n".format(x, y, z, atomicSymbol))
 
-                atomPositionsPointer = atomPositionsPointer + 1;
+            atomPositionsPointer = atomPositionsPointer + 1;

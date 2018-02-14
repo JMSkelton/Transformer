@@ -1,5 +1,6 @@
 # Transformer/Screening/Utilities.py
 
+
 # -------
 # Imports
 # -------
@@ -94,3 +95,24 @@ def ExportRankedEnergiesToCSV(rankedEnergies, filePath, energyUnits = "eV"):
             outputWriterCSV.writerow(
                 [spacegroupNumber, spacegroupSymbol, structureNumber + 1, totalEnergy]
                 );
+
+def ImportRankedEnergiesFromCSV(filePath):
+    rankedEnergies = [];
+
+    with open(filePath, 'r') as inputReader:
+        inputReaderCSV = csv.reader(inputReader);
+
+        # Skip header row.
+
+        next(inputReaderCSV);
+
+        for row in inputReaderCSV:
+            # Files exported using ExportRankedEnergiesToCSV() have rows in the format (spacegroup_number, spacegroup_symbol, structure_number, total_energy).
+            # Lists returned by RankEnergies() have the format ((spacegroup_number, spacegroup_symbol), structure_number, total_energy).
+            # The structure numbers in the CSV file are one-based, whereas the indices returned by RankEnergies() are zero-based.
+
+            rankedEnergies.append(
+                ((int(row[0]), row[1]), int(row[2]) - 1, float(row[3]))
+                );
+
+    return rankedEnergies;

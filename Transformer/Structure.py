@@ -45,8 +45,8 @@ class Structure:
     Properties that are non-trivial to compute or are likely to be accessed repeatedly are automatically cached for performance.
 
     Usage notes:
-        - Use the Get*/Set* methods to access and update the structure data; modifying the internal arrays directly may cause other Transformer routines to do unexpected things!
-        - Most derived properties (e.g. symmetry properties) are returned "as is", and need to be copied before modification.
+        Use the Get*/Set* methods to access and update the structure data; modifying the internal arrays directly may cause other Transformer routines to do unexpected things!
+        Most derived properties (e.g. symmetry properties) are returned "as is", and need to be copied before modification.
     """
 
     # -----------

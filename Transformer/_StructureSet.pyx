@@ -61,9 +61,9 @@ cpdef bint _CompareAtomPositions(np.float64_t [:, :] compare_positions, np.float
 
     return False;
 
-# Cython implementation of the _GenerateSymmetryTransformedPositions() routine from the Merging module.
+# Cython routine for generating the symmetry expansions of an input structure.
 
-cpdef np.float64_t [:, :, :] _GenerateSymmetryTransformedPositions(structure, list symmetry_operations, np.float64_t tolerance):
+cpdef np.ndarray[dtype = _AtomData, ndim = 2] _ExpandStructure(structure, list symmetry_operations, np.float64_t tolerance):
     # Get the atom data from the supplied Structure object.
 
     cdef np.ndarray[dtype = _AtomData, ndim = 1] atom_data = structure.GetAtomDataNumPy(copy = False);
@@ -127,4 +127,4 @@ cpdef np.float64_t [:, :, :] _GenerateSymmetryTransformedPositions(structure, li
 
     # Return a view of the transformed positions.
 
-    return transformed_structures.view(dtype = np.float64).reshape((num_sym_ops, num_atoms, 4))[:, :, 1:];
+    return transformed_structures;

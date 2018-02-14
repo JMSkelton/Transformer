@@ -27,7 +27,7 @@ class MetadiseCalculator(TotalEnergyCalculatorBase):
 
     def __init__(
         self,
-        potenPath = None, species = None,
+        potenPath = None, speciesCharges = None,
         metadiseExe = None, tempDirectory = None,
         atomicSymbolLookupTable = None,
         useMP = False, mpNumProcesses = None
@@ -38,9 +38,9 @@ class MetadiseCalculator(TotalEnergyCalculatorBase):
         if metadiseExe == None:
             metadiseExe = MetadiseCalculator.DefaultMetadiseExe;
 
-        # Only set potenPath if species information is not supplied.
+        # Only set potenPath if species charges are not supplied.
 
-        if species == None and potenPath == None:
+        if speciesCharges == None and potenPath == None:
             potenPath = MetadiseCalculator.DefaultPotenPath;
 
         # Parameter checking.
@@ -51,11 +51,11 @@ class MetadiseCalculator(TotalEnergyCalculatorBase):
 
             # If both a poten file and a set of charges have been supplied, the poten file takes precedence -> print a warning.
 
-            if species != None:
-                warnings.warn("If both a potential file and species parameters are supplied, the former takes precedence and the potential will be read from file.", UserWarning);
+            if speciesCharges != None:
+                warnings.warn("If both a potential file and species charges are supplied, the former takes precedence and the potential will be read from file.", UserWarning);
         else:
-            if species == None:
-                raise Exception("Error: One of potenPath or species must be supplied.");
+            if speciesCharges == None:
+                raise Exception("Error: One of potenPath or speciesCharges must be supplied.");
 
         # Call the base class constructor.
 
@@ -64,7 +64,7 @@ class MetadiseCalculator(TotalEnergyCalculatorBase):
         # Store fields.
 
         self._potenPath = potenPath;
-        self._species = species;
+        self._speciesCharges = speciesCharges;
 
         self._metadiseExe = metadiseExe;
 
@@ -94,14 +94,14 @@ class MetadiseCalculator(TotalEnergyCalculatorBase):
                 self._potenPath, os.path.join(tempDirectory, r"poten.txt")
                 );
         else:
-            species = self._species;
+            speciesCharges = self._speciesCharges;
 
             # Get a list of atomic symbols for the atom types in the structure, and check there is an entry for each in the supplied species parameters.
 
             atomicSymbols, _ = structure.GetAtomicSymbolsCounts(atomicSymbolLookupTable = atomicSymbolLookupTable);
 
             for atomicSymbol in atomicSymbols:
-                if atomicSymbol not in species:
+                if atomicSymbol not in speciesCharges:
                     raise Exception("Error: Atom type '{0}' not defined in the supplied species parameters.".format(atomicSymbol));
 
             # Write out a poten file listing the supplied species charges and masses.
@@ -112,8 +112,8 @@ class MetadiseCalculator(TotalEnergyCalculatorBase):
                 outputWriter.write("    species\n");
 
                 for symbol in atomicSymbols:
-                    charge, mass = species[symbol];
-                    outputWriter.write("        {0: >4}  core  {1: >8.4f}  {2: >8.3f}\n".format(symbol, charge, mass));
+                    charge = speciesCharges[symbol];
+                    outputWriter.write("        {0: >4}  core  {1: >8.3f}\n".format(symbol, charge));
 
                 outputWriter.write("    ends\n");
 

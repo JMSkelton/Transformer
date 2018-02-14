@@ -26,10 +26,12 @@ structure = ReadStructure("Cu2ZnSnS4.vasp");
 supercell = structure.GetSupercell(2, 2, 1);
 
 # Generate inequivalent structures with up to four Cu <-> Zn antisite defects using the AntisiteDefects convenience function.
-# Note: This example is quite heavy, and may take a long time to run without Cython installed to allow the Cython-optimised routines to be used.
+
+# This example is very heavy, and will take a long time to run without Cython installed to allow the Cython-optimised routines to be used.
+# We also use the symmetryExpansion = 'fast' keyword, which runs much faster and, in this case, generates the same result as the default symmetryExpansion = 'full'.
 
 antisiteDefects = AntisiteDefects(
-    supercell, 'Cu', 'Zn', numDefects = 4
+    supercell, 'Cu', 'Zn', numDefects = 4, symmetryExpansion = 'fast'
     );
 
 # Output the results.
