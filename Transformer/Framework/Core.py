@@ -543,6 +543,14 @@ def _GenerateSubstitutedStructutes(
         [item for item in zip(parentStructures, parentDegeneracies)], accumulators, progressBar = printProgressUpdate
         );
 
+    # If the number of parent structures is comparable to the number of worker processes, workers may return empty structure sets.
+    # To avoid making the reduction routine messy, we filter the result set before passing it to _GenerateSubstitutedStructutes_Reduce().
+
+    results = [
+        (structureSet, structureSetFiltered, numGen) for structureSet, structureSetFiltered, numGen in results
+            if structureSet != None
+        ];
+
     # Merge result sets using a parallel "divide and conquer" reduction.
 
     newStructureSet, newStructureSetFiltered, numGen = _GenerateSubstitutedStructutes_Reduce(
