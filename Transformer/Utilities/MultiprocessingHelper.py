@@ -14,6 +14,7 @@
 
 import multiprocessing;
 import time;
+import warnings;
 
 try:
     # Python 2.x.
@@ -234,7 +235,7 @@ def QueueMap(inputList, mappers, progressBar = False):
     # If progressBar is set but the tqdm module is not available, issue a warning and reset it.
 
     if progressBar and not _TQDM:
-        warings.warn("The tqdm module could not be imported -> progressBar will be reset to False.", RuntimeWarning);
+        warnings.warn("The tqdm module could not be imported -> progressBar will be reset to False.", RuntimeWarning);
 
         progressBar = False;
 
@@ -457,7 +458,7 @@ def QueueAccumulate(inputList, accumulators, progressBar = False):
     # If progressBar is set but the tqdm module is not available, issue a warning and reset it.
 
     if progressBar and not _TQDM:
-        warings.warn("The tqdm module could not be imported -> progressBar will be reset to False.", RuntimeWarning);
+        warnings.warn("The tqdm module could not be imported -> progressBar will be reset to False.", RuntimeWarning);
 
         progressBar = False;
 

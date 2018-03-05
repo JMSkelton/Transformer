@@ -178,7 +178,7 @@ def ImportStructureSet(filePath, fileFormat = None, atomTypeNumberLookupTable = 
     # If progressBar is set and the tqdm module is not available, issue a RuntimeWarning and reset it.
 
     if progressBar and not _TQDM:
-        warings.warn("The tqdm module could not be imported -> progressBar will be reset to False.", RuntimeWarning);
+        warnings.warn("The tqdm module could not be imported -> progressBar will be reset to False.", RuntimeWarning);
 
         progressBar = False;
 
