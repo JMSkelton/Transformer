@@ -5,19 +5,10 @@
 # Imports
 # -------
 
-import multiprocessing;
 import os;
 import shutil;
-import time;
 
-try:
-    # Python 2.x.
-
-    from Queue import Empty;
-except ImportError:
-    # Python >= 3.
-
-    from queue import Empty;
+from Transformer import Structure;
 
 from Transformer.Utilities import IOHelper;
 from Transformer.Utilities import MultiprocessingHelper;
@@ -43,7 +34,10 @@ class TotalEnergyCalculatorBase(object):
     # Constructor
     # -----------
 
-    def __init__(self, tempDirectory = None, useMP = False, mpNumProcesses = None):
+    def __init__(
+        self, tempDirectory = None, useMP = False, mpNumProcesses = None, atomicSymbolLookupTable = None, removeAtoms = None
+        ):
+
         # If tempDir is not set, set it to the default value.
         # This includes the PID of the current process to (hopefully!) make it unique.
 
@@ -55,12 +49,24 @@ class TotalEnergyCalculatorBase(object):
         if useMP and mpNumProcesses == None:
             mpNumProcesses = mpNumProcesses = MultiprocessingHelper.CPUCount();
 
+        # If removeAtoms is set, convert to a list of atom-type numbers.
+
+        if removeAtoms != None:
+            removeAtoms = [
+                Structure.AtomTypeToAtomTypeNumber(atomTypeNumber, atomicSymbolLookupTable)
+                    for atomTypeNumber in removeAtoms
+                ];
+
         # Store fields.
 
         self._tempDirectory = tempDirectory;
 
         self._useMP = useMP;
         self._mpNumProcesses = mpNumProcesses;
+
+        self._atomicSymbolLookupTable = atomicSymbolLookupTable;
+
+        self._removeAtoms = removeAtoms;
 
     # ---------------
     # Private Methods
@@ -104,10 +110,32 @@ class TotalEnergyCalculatorBase(object):
         else:
             return tempDirectories;
 
-    def _GetTotalEnergy(self, structure, degeneracy, raiseOnError, tempDirectory):
+    def _GetTotalEnergy(self, structure, degeneracy, raiseOnError):
+        # If the _removeAtoms field is set, generate a clone of structure with the atoms removed.
+
+        removeAtoms = self._removeAtoms;
+
+        if removeAtoms != None:
+            structure = structure.Clone();
+
+            atomTypeNumbers = structure.GetAtomTypeNumbers();
+
+            removeIndices = [
+                i for i, atomTypeNumber in enumerate(atomTypeNumbers)
+                    if atomTypeNumber in removeAtoms
+                ];
+            
+            structure.DeleteAtoms(removeIndices);
+
+        # Create temporary directory if required.
+
+        tempDirectory = self._CreateTempDirectories();
+
         # Pass to the GetTotalEnergy() method.
 
-        totalEnergy = self.GetTotalEnergy(structure, degeneracy, raiseOnError = raiseOnError, tempDirectory = tempDirectory);
+        totalEnergy = self.GetTotalEnergy(
+            structure, degeneracy, raiseOnError = raiseOnError, tempDirectory = tempDirectory
+            );
 
         # If using a temporary directory, clear it.
 
@@ -137,7 +165,7 @@ class TotalEnergyCalculatorBase(object):
         # Calculate a list of total energies.
 
         result = [
-            self._GetTotalEnergy(structures[i], degeneracies[i], raiseOnError, tempDirectory)
+            self._GetTotalEnergy(structures[i], degeneracies[i], raiseOnError)
                 for i in iValues
             ];
 
@@ -199,31 +227,20 @@ class TotalEnergyCalculatorBase(object):
     def CalulatorRequiresTempDir(self):
         raise NotImplementedError("Error: CalculatorRequiresTempDir() must be implemented in derived classes.");
 
-    def GetTotalEnergy(self, structure, degeneracy, raiseOnError, tempDirectory):
+    def GetTotalEnergy(self, structure, degeneracy, raiseOnError, tempDirectory, atomicSymbolLookupTable):
         raise NotImplementedError("Error: GetTotalEnergy() must be implemented in derived classes.");
 
-    def CalculateTotalEnergy(self, structure, degeneracy = 1, raiseOnError = True, tempDirectory = None):
+    def CalculateTotalEnergy(self, structure, degeneracy = 1, raiseOnError = True):
         # Paraeter validation.
 
         if structure == None:
             raise Exception("Error: structure cannot be None.");
 
-        # Create a temporary directory if required.
+        # Calculate and return the total energy.
 
-        tempDirectory = self._CreateTempDirectories();
-
-        # Get the total energy.
-
-        totalEnergy = self.GetTotalEnergy(structure, degeneracy, raiseOnError, tempDirectory);
-
-        # Delete the temporary directory.
-
-        if tempDirectory != None:
-            shutil.rmtree(tempDirectory);
-
-        # Return the total energy.
-
-        return totalEnergy;
+        return self._GetTotalEnergy(
+            structure, degeneracy, raiseOnError
+            );
 
     def CalculateTotalEnergies(self, structures, degeneracies = None, raiseOnError = True, progressBar = True):
         # Parameter validation.
@@ -317,6 +334,6 @@ class _CalculateTotalEnergiesMP_Mapper(MultiprocessingHelper.MapperBase):
     def Map(self, arg):
         structure, degeneracy = arg;
 
-        return self._totalEnergyCalculator._GetTotalEnergy(
+        return self._totalEnergyCalculator.GetTotalEnergy(
             structure, degeneracy, raiseOnError = self._raiseOnError, tempDirectory = self._tempDirectory
             );

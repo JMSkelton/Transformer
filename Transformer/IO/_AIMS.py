@@ -5,7 +5,6 @@
 # Imports
 # -------
 
-from Transformer.IO import _Common;
 from Transformer.Utilities import StructureTools;
 
 from Transformer.Structure import Structure;
@@ -16,7 +15,7 @@ from Transformer.Structure import Structure;
 # Functions
 # ---------
 
-def ReadGeometryInFile(inputReader, atomTypeNumberLookupTable = None):
+def ReadGeometryInFile(inputReader, atomicSymbolLookupTable = None):
     # Variables to collect.
 
     latticeVectors = [];
@@ -76,13 +75,9 @@ def ReadGeometryInFile(inputReader, atomTypeNumberLookupTable = None):
 
         atomPositions.append(atomPosition);
 
-    # Convert the atomic symbols to atom-type numbers.
-
-    atomTypeNumbers = _Common.AtomicSymbolsToAtomTypeNumbers(atomicSymbols, atomTypeNumberLookupTable = atomTypeNumberLookupTable);
-
     # Return a Structure object.
 
-    return Structure(latticeVectors, atomPositions, atomTypeNumbers);
+    return Structure(latticeVectors, atomPositions, atomicSymbols, atomicSymbolLookupTable = atomicSymbolLookupTable);
 
 def WriteGeometryInFile(structure, outputWriter, atomicSymbolLookupTable = None):
     # Write the structure name as a comment.

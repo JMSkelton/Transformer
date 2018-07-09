@@ -11,6 +11,7 @@ import warnings;
 import numpy as np;
 
 from Transformer.Structure import Structure;
+from Transformer.Utilities import MultiprocessingHelper;
 
 # Try to import the Cython-optimised _StructureSet module.
 # This module provides core inner routines that replace the Python/NumPy implementations in this module.
@@ -58,7 +59,7 @@ class StructureSet(object):
         self,
         structures = None, degeneracies = None, noInitialMerge = False,
         tolerance = None, symmetryExpansion = 'none', parentSymmetryOperations = None,
-        compareLatticeVecors = True, compareAtomTypeNumbers = True, compareAtomPositions = True,
+        compareLatticeVectors = True, compareAtomTypeNumbers = True, compareAtomPositions = True,
         expectedAtomCount = None, compareAtomIndexRanges = None
         ):
 
@@ -73,7 +74,7 @@ class StructureSet(object):
             symmetryExpansion -- control the coverage of the symmetry expansion when comparing structures ('none', 'fast', 'full'; default: 'none').
             parentSymmetryOperations -- in conjunction with symmetryExpansion, sets the symmetry operations to be used to transform structures to symmetry-equivalent configurations.
 
-            compareLatticeVecors -- if True (default), compare lattice vectors when testing structure equivalence.
+            compareLatticeVectors -- if True (default), compare lattice vectors when testing structure equivalence.
             compareAtomTypeNumbers -- if True (default), compare atom-type numbers when testing structure equivalence.
             compareAtomPositions -- if True (default), compare atom positions when testing structure equivalence.
 
@@ -127,7 +128,7 @@ class StructureSet(object):
         self._symmetryExpansion = symmetryExpansion;
         self._parentSymmetryOperations = parentSymmetryOperations;
 
-        self._compareLatticeVectors = compareLatticeVecors;
+        self._compareLatticeVectors = compareLatticeVectors;
         self._compareAtomTypeNumbers = compareAtomTypeNumbers;
         self._compareAtomPositions = compareAtomPositions;
 
@@ -177,16 +178,12 @@ class StructureSet(object):
     # Private Methods
     # ---------------
 
-    def _AddStructures(self, structures, degeneracies, isUnion = False):
+    def _FindStructure(self, structure):
         """
-        Merge a list of structures and degeneracies into the set and return the number of structures added.
+        Attempt to find a supplied structure in the internal structure set.
 
-        Arguments:
-            structures -- list of structures to add to the set.
-            degeneracies -- list of degeneracies associated with the structures.
-
-        Keyword arguments:
-            isUnion -- if True, assume the structures in the list are unique, and only compare them to structures in the initial set while merging.
+        Return value:
+            If the structure is found, a (spacegroup, structure_number) tuple indexing the matched structure in the internal structure set; if not, returns None.
         """
 
         tolerance = self._tolerance;
@@ -194,7 +191,7 @@ class StructureSet(object):
         symmetryExpansion = self._symmetryExpansion;
         parentSymmetryOperations = self._parentSymmetryOperations;
 
-        compareLatticeVecors = self._compareLatticeVectors;
+        compareLatticeVectors = self._compareLatticeVectors;
         compareAtomTypeNumbers = self._compareAtomTypeNumbers;
         compareAtomPositions = self._compareAtomPositions;
 
@@ -205,167 +202,234 @@ class StructureSet(object):
 
         symmetryExpansionsCache = self._symmetryExpansionsCache;
 
-        # If isUnion is set, we assume the new structures are unique and apply a performance optimisation by only comparing new structures to those in the initial set.
-        # For this, we need to store the number of structures in each spacegroup group before we add any new ones.
+        # If an expected atom count has been set, check structure has the correct number of atoms.
 
-        compareMaxIndices = None;
+        atomCount = structure.GetAtomCount();
 
-        if isUnion:
-            compareMaxIndices = {
-                key : len(structureList) for key, (structureList, _)
-                    in structureSet.items()
-                };
+        if expectedAtomCount != None and atomCount != expectedAtomCount:
+            raise Exception("Error: structure does not have the set expected atom count ({0} != {1}).".format(atomCount, expectedAtomCount));
 
-        # Keep track of the number of new structures added to the set.
+        # Get the spacegroup of structure and check whether the set contains structures with the same spacegroup.
 
-        addCount = 0;
+        spacegroup = structure.GetSpacegroup(tolerance = tolerance);
 
-        for structure, degeneracy in zip(structures, degeneracies):
-            atomCount = structure.GetAtomCount();
+        if spacegroup not in structureSet:
+            return None;
 
-            if expectedAtomCount != None and atomCount != expectedAtomCount:
-                raise Exception("Error: One or more structures do not have the set expected atom count ({0} != {1}).".format(atomCount, expectedAtomCount));
+        # Compare structure to those in the set with the same spacegroup.
 
-            spacegroup = structure.GetSpacegroup(tolerance = tolerance);
+        structureList, _ = structureSet[spacegroup];
 
-            if spacegroup not in structureSet:
-                # If there is no entry in the structure set for the spacegroup, create one.
+        symmetryExpansionsList = None;
 
+        if symmetryExpansionsCache != None:
+            symmetryExpansionsList = symmetryExpansionsCache[spacegroup];
+
+        # List index of matching structure.
+
+        matchIndex = None;
+
+        # Symmetry-transformed positions for the new structure.
+        # Since these are (relatively) expensive to generate and are not necessarily required, we use lazy initialisation.
+
+        transformedPositions = None;
+
+        # Loop over structures.
+
+        for i, compareStructure in enumerate(structureList):
+            match = True;
+
+            # Compare lattice vectors if required.
+
+            if compareLatticeVectors:
+                latticeVectors1 = structure.GetLatticeVectorsNumPy(copy = False);
+                latticeVectors2 = compareStructure.GetLatticeVectorsNumPy(copy = False);
+
+                match = np.all(np.abs(latticeVectors1 - latticeVectors2) < tolerance);
+
+            # Compare atom-type numbers and/or atom positions if required.
+
+            if match and (compareAtomTypeNumbers or compareAtomPositions):
+                # First check whether the structures have the same number of atoms.
+
+                match = compareStructure.GetAtomCount() == atomCount;
+
+                # Compare atom-type numbers if required.
+
+                if compareAtomTypeNumbers:
+                    atomTypeNumbers1 = structure.GetAtomTypeNumbersNumPy(copy = False);
+                    atomTypeNumbers2 = compareStructure.GetAtomTypeNumbersNumPy(copy = False);
+
+                    match = (atomTypeNumbers1 == atomTypeNumbers2).all();
+
+                # Compare atom positions if required.
+
+                if match and compareAtomPositions:
+                    if transformedPositions is None:
+                        if symmetryExpansion != 'none':
+                            # If performing symmetry expansions, generate symmetry-transformed positions for the new structure.
+                            # If using the 'full' setting, we reduce the expansion to unique structures, mainly to keep the memory taken up by the symmetry-expansion cache to a minimum.
+
+                            transformedPositions = _GenerateSymmetryExpandedPositions(
+                                structure, parentSymmetryOperations, tolerance, reduceStructures = symmetryExpansion == 'full'
+                                );
+                        else:
+                            # If not, just compare positions directly.
+
+                            transformedPositions = np.array(
+                                [structure.GetAtomPositionsNumPy(copy = False)]
+                                );
+
+                    match = _CompareAtomPositions(
+                        compareStructure.GetAtomPositionsNumPy(copy = False), transformedPositions, tolerance,
+                        compareAtomIndexRanges = compareAtomIndexRanges if compareAtomIndexRanges != None else [(0, atomCount)]
+                        );
+
+                    if not match and symmetryExpansion == 'full':
+                        # If performing 'full' symmetry expansion, compare tranformations of the structure in the set to tthe ransformations of the new structure.
+
+                        compareTransformedPositions = symmetryExpansionsList[i];
+
+                        if compareTransformedPositions is None:
+                            # If the cached symmetry expansions of the reference structure have not been initialised, do so.
+
+                            compareTransformedPositions = _GenerateSymmetryExpandedPositions(
+                                compareStructure, parentSymmetryOperations, tolerance, reduceStructures = True
+                                );
+
+                            symmetryExpansionsList[i] = compareTransformedPositions;
+
+                        # Compare the positions from each transformation of the reference structure to the transformations of the new structure.
+
+                        for comparePositions in compareTransformedPositions:
+                            match = _CompareAtomPositions(
+                                comparePositions, transformedPositions, tolerance,
+                                compareAtomIndexRanges = compareAtomIndexRanges if compareAtomIndexRanges != None else [(0, atomCount)]
+                                );
+
+                            if match:
+                                break;
+
+            if match:
+                # If the new structure matches, record the index of the match and break.
+
+                matchIndex = i;
+                break;
+
+        if matchIndex != None:
+            # If a matching structure was found in the set, return a (spacegroup, structure_number) tuple specifying the key.
+
+            return (structure.GetSpacegroup(), matchIndex);
+        else:
+            return None;
+
+    def _UpdateStructureSet(self, key, structure, degeneracy):
+        """
+        Update the internal structure set.
+
+        Arguments:
+            key -- (spacegroup, structure_number) index of a matching structure in the internal structure set (if found) returned by the _FindStructure() routine.
+            structure -- structure to add/update.
+            degeneracy -- degeneracy.
+        """
+
+        structureSet = self._structureSet;
+        symmetryExpansionsCache = self._symmetryExpansionsCache;
+
+        if key is not None:
+            # structure is already in the internal structure set -> update its degeneracy.
+
+            spacegroup, index = key;
+
+            _, degeneracyList = structureSet[spacegroup];
+
+            degeneracyList[index] += degeneracy;
+
+            return False;
+
+        else:
+            # Add structure to the set.
+
+            spacegroup = structure.GetSpacegroup();
+
+            if spacegroup in structureSet:
+                structureList, degeneracyList = structureSet[spacegroup];
+
+                structureList.append(structure);
+                degeneracyList.append(degeneracy);
+
+                if symmetryExpansionsCache != None:
+                    symmetryExpansionsCache[spacegroup].append(None);
+            else:
                 structureSet[spacegroup] = ([structure], [degeneracy]);
-
-                # If using symmetryExpansion = 'full', create an entry in the symmetry-expansion cache.
 
                 if symmetryExpansionsCache != None:
                     symmetryExpansionsCache[spacegroup] = [None];
 
-                addCount += 1;
+            return True;
+
+    def _AddStructures(self, structures, degeneracies, isUnion = False, useMP = False, mpNumProcesses = None):
+        """
+        Merge a list of structures and degeneracies into the set and return the number of structures added.
+
+        Arguments:
+            structures -- list of structures to add to the set.
+            degeneracies -- list of degeneracies associated with the structures.
+
+        Keyword arguments:
+            isUnion -- if True, assume the structures in the list are unique, and only compare them to structures in the initial set while merging.
+            useMP -- if True, perform membership testing in parallel using process-based multithreading (requires isUnion = True, default: False).
+            mpNumProcesses -- maximum number of worker processes for useMP = True (default: automatically determined).
+        """
+
+        structureSet = self._structureSet;
+
+        # Keep track of the number of structures added to the set.
+
+        addCount = None;
+
+        if isUnion:
+            # If performing a union, test the structures and add/update as a batch.
+
+            structureKeys = None;
+
+            if useMP and len(structures) > 1:
+                # If useMP is set and we have more than one structure, perform the membership testing in parallel.
+
+                numWorkerProcesses = min(
+                    mpNumProcesses, len(structures)
+                    );
+
+                mappers = [
+                    _AddStructures_FindStructureMapper(self)
+                        for i in range(0, numWorkerProcesses)
+                    ];
+
+                structureKeys = MultiprocessingHelper.QueueMap(
+                    structures, mappers, progressBar = False
+                    );
 
             else:
-                structureList, degeneracyList = structureSet[spacegroup];
+                structureKeys = [
+                    self._FindStructure(structure) for structure in structures
+                    ];
 
-                symmetryExpansionsList = None;
+            # Update the structure set and count the number of structures added.
 
-                if symmetryExpansionsCache != None:
-                    symmetryExpansionsList = symmetryExpansionsCache[spacegroup];
+            addCount = sum(
+                1 if self._UpdateStructureSet(key, structure, degeneracy) else 0
+                    for structure, degeneracy, key in zip(structures, degeneracies, structureKeys)
+                );
 
-                # Work out the range of structures to compare against.
+        else:
+            # Check for and update one structure at a time.
 
-                compareMaxIndex = None;
+            addCount = 0;
 
-                if compareMaxIndices != None:
-                    compareMaxIndex = compareMaxIndices[spacegroup] if spacegroup in compareMaxIndices else 0;
-                else:
-                    compareMaxIndex = len(structureList);
+            for structure, degeneracy in zip(structures, degeneracies):
+                key = self._FindStructure(structure);
 
-                # Store the index of the existing structure the new structure matches.
-
-                matchIndex = None;
-
-                # Generate symmetry-transformed positions for the new structure.
-                # These are (relatively) expensive to generate and in some cases may not be required, so lazy initialisation is used.
-
-                transformedPositions = None;
-
-                # Compare against structures in the current set up to compareMaxIndex.
-
-                for i in range(0, compareMaxIndex):
-                    compareStructure = structureList[i];
-
-                    match = True;
-
-                    # Compare lattice vectors if required
-
-                    if compareLatticeVecors:
-                        latticeVectors1 = structure.GetLatticeVectorsNumPy(copy = False);
-                        latticeVectors2 = compareStructure.GetLatticeVectorsNumPy(copy = False);
-
-                        match = np.all(np.abs(latticeVectors1 - latticeVectors2) < tolerance);
-
-                    # Compare atom-type numbers and/or atom positions if required.
-
-                    if match and (compareAtomTypeNumbers or compareAtomPositions):
-                        # First check whether the structures have the same number of atoms.
-
-                        match = compareStructure.GetAtomCount() == atomCount;
-
-                        # Compare atom-type numbers if required.
-
-                        if compareAtomTypeNumbers:
-                            atomTypeNumbers1 = structure.GetAtomTypeNumbersNumPy(copy = False);
-                            atomTypeNumbers2 = compareStructure.GetAtomTypeNumbersNumPy(copy = False);
-
-                            match = (atomTypeNumbers1 == atomTypeNumbers2).all();
-
-                        # Compare atom positions if required.
-
-                        if match and compareAtomPositions:
-                            if transformedPositions is None:
-                                if symmetryExpansion != 'none':
-                                    # If performing symmetry expansions, generate symmetry-transformed positions for the new structure.
-                                    # If using the 'full' setting, we reduce the expansion to unique structures, mainly to keep the memory taken up by the symmetry-expansion cache to a minimum.
-
-                                    transformedPositions = _GenerateSymmetryExpandedPositions(
-                                        structure, parentSymmetryOperations, tolerance, reduceStructures = symmetryExpansion == 'full'
-                                        );
-                                else:
-                                    # If not, just compare positions directly.
-
-                                    transformedPositions = np.array(
-                                        [structure.GetAtomPositionsNumPy(copy = False)]
-                                        );
-
-                            match = _CompareAtomPositions(
-                                compareStructure.GetAtomPositionsNumPy(copy = False), transformedPositions, tolerance,
-                                compareAtomIndexRanges = compareAtomIndexRanges if compareAtomIndexRanges != None else [(0, atomCount)]
-                                );
-
-                            if not match and symmetryExpansion == 'full':
-                                # If performing 'full' symmetry expansion, compare tranformations of the structure in the set to tthe ransformations of the new structure.
-
-                                compareTransformedPositions = symmetryExpansionsList[i];
-
-                                if compareTransformedPositions is None:
-                                    # If the cached symmetry expansions of the reference structure have not been initialised, do so.
-
-                                    compareTransformedPositions = _GenerateSymmetryExpandedPositions(
-                                        compareStructure, parentSymmetryOperations, tolerance, reduceStructures = True
-                                        );
-
-                                    symmetryExpansionsList[i] = compareTransformedPositions;
-
-                                # Compare the positions from each transformation of the reference structure to the transformations of the new structure.
-
-                                for comparePositions in compareTransformedPositions:
-                                    match = _CompareAtomPositions(
-                                        comparePositions, transformedPositions, tolerance,
-                                        compareAtomIndexRanges = compareAtomIndexRanges if compareAtomIndexRanges != None else [(0, atomCount)]
-                                        );
-
-                                    if match:
-                                        break;
-
-                    if match:
-                        # If the new structure matches, record the index of the match and break.
-
-                        matchIndex = i;
-                        break;
-
-                if matchIndex != None:
-                    # If a match was found, update the degeneracy of the matching structure in the set.
-
-                    degeneracyList[matchIndex] += degeneracy;
-                else:
-                    # If not, add the new structure and degeneracy to the lists.
-
-                    structureList.append(structure);
-                    degeneracyList.append(degeneracy);
-
-                    # If using 'full' symmetry expansion, add the transformed positions (if initialised) to the cache.
-
-                    if symmetryExpansionsList != None:
-                        symmetryExpansionsList.append(transformedPositions);
-                        #symmetryExpansionsList.append(None);
-
+                if self._UpdateStructureSet(key, structure, degeneracy):
                     addCount += 1;
 
         # Return the number of structures added to the set.
@@ -435,10 +499,19 @@ class StructureSet(object):
 
         return self._AddStructures(structures, degeneracies, isUnion = False);
 
-    def UpdateUnion(self, structureSet):
+    def UpdateUnion(self, structureSet, useMP = False, mpNumProcesses = None):
         """
         Perform a union operation with structureSet and return the number of new structures added.
-        A union is only valid when both structure sets use the same parameters for identifying unique structures.
+
+        Arguments:
+            structureSet -- structureSet to update with.
+
+        Keyword arguments:
+            useMP -- perform the union in parallel using process-based multithreading (default: False).
+            mpNumProcesses -- if useMP is set, specify the maximum number of worker processes (default: automatically determined from the CPU core count).
+
+        Notes:
+            A union is only valid when both structure sets use the same parameters for identifying unique structures.
         """
 
         if structureSet == None:
@@ -451,7 +524,9 @@ class StructureSet(object):
         if not isUnion:
             warnings.warn("UpdateUnion() is only valid when the supplied structure set is set to use the same comparison parameters as the calling one.", UserWarning);
 
-        return self._AddStructures(*structureSet.GetStructureSetFlat(), isUnion = isUnion);
+        return self._AddStructures(
+            *structureSet.GetStructureSetFlat(), isUnion = isUnion, useMP = useMP, mpNumProcesses = mpNumProcesses
+            );
 
     def Remove(self, removeIndices):
         """
@@ -608,9 +683,27 @@ class StructureSet(object):
         return StructureSet(
             structures = structures, degeneracies = degeneracies, noInitialMerge = noInitialMerge,
             tolerance = self._tolerance, symmetryExpansion = self._symmetryExpansion, parentSymmetryOperations = self._parentSymmetryOperations,
-            compareLatticeVecors = self._compareLatticeVectors, compareAtomTypeNumbers = self._compareAtomTypeNumbers, compareAtomPositions = self._compareAtomPositions,
+            compareLatticeVectors = self._compareLatticeVectors, compareAtomTypeNumbers = self._compareAtomTypeNumbers, compareAtomPositions = self._compareAtomPositions,
             expectedAtomCount = self._expectedAtomCount, compareAtomIndexRanges = self._compareAtomIndexRanges
             );
+
+
+# ----------------------------------------
+# _AddStructures_FindStructureMapper Class
+# ----------------------------------------
+
+""" Implementation of the MultiprocessingHelper.MapperBase class used for the process-based multithreading in the StructureSet.UpdateUnion method. """
+
+class _AddStructures_FindStructureMapper(MultiprocessingHelper.MapperBase):
+    """ Class constructor. """
+
+    def __init__(self, structureSet):
+        self._structureSet = structureSet;
+
+    """ Implementation of the MapperBase.Map() method. """
+
+    def Map(self, structure):
+        return self._structureSet._FindStructure(structure);
 
 
 # ------------------

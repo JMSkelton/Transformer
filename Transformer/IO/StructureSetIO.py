@@ -11,6 +11,7 @@ import os;
 import re;
 import sys;
 import tarfile;
+import time;
 import warnings;
 
 from Transformer.IO import StructureIO;
@@ -153,6 +154,8 @@ def ExportStructureSet(structureSet, archivePath, fileFormat = 'vasp', atomicSym
                         fileObj.getvalue()
                         );
 
+                    fileInfo.mtime = time.time();
+
                     archiveFile.addfile(
                         tarinfo = fileInfo, fileobj = fileObj
                         );
@@ -174,7 +177,7 @@ def _ImportStructureSet_PerformSymmetryAnalysis(structure):
 
     return structure;
 
-def ImportStructureSet(filePath, fileFormat = None, atomTypeNumberLookupTable = None, progressBar = False, useMP = False, mpNumProcesses = None):
+def ImportStructureSet(filePath, fileFormat = None, atomicSymbolLookupTable = None, progressBar = False, useMP = False, mpNumProcesses = None):
     # If progressBar is set and the tqdm module is not available, issue a RuntimeWarning and reset it.
 
     if progressBar and not _TQDM:
@@ -233,7 +236,7 @@ def ImportStructureSet(filePath, fileFormat = None, atomTypeNumberLookupTable = 
                 # Read the structure from the memory stream.
 
                 structure = StructureIO.ReadStructure(
-                    stringBuffer, fileFormat = fileFormatCurrent, atomTypeNumberLookupTable = atomTypeNumberLookupTable
+                    stringBuffer, fileFormat = fileFormatCurrent, atomicSymbolLookupTable = atomicSymbolLookupTable
                     );
 
                 structures.append(structure);

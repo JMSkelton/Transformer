@@ -13,6 +13,7 @@
 # -------
 
 import math;
+import re;
 
 import numpy as np;
 
@@ -52,7 +53,7 @@ class Structure:
     # Constructor
     # -----------
 
-    def __init__(self, latticeVectors, atomPositions, atomTypes, name = None):
+    def __init__(self, latticeVectors, atomPositions, atomTypes, name = None, atomicSymbolLookupTable = None):
         """
         Class constructor.
 
@@ -63,6 +64,7 @@ class Structure:
 
         Keyword arguments:
             name -- a name for the structure.
+            atomicSymbolLookupTable -- optional { type_number : symbol } dictionary used to map non-standard atom types to integer type numbers.
         """
 
         if len(atomTypes) != len(atomPositions):
@@ -71,7 +73,7 @@ class Structure:
         # Convert atom types to atom-type numbers.
 
         atomTypeNumbers = [
-            AtomTypeToAtomTypeNumber(atomType) for atomType in atomTypes
+            AtomTypeToAtomTypeNumber(atomType, atomicSymbolLookupTable) for atomType in atomTypes
             ];
 
         for typeNumber in atomTypeNumbers:
@@ -128,7 +130,7 @@ class Structure:
         self._pChemicalFormula = None;
         self._pNeighbourTable = None;
 
-    def _PerformSymmetryAnalysis(self, tolerance):
+    def _PerformSymmetryAnalysis(self, tolerance, spacegroupOnly = False):
         """ Performs a symmetry analysis using spglib and the supplied tolerance. """
 
         # If no symmetry tolerance is provided, use the default value.
@@ -136,43 +138,74 @@ class Structure:
         if tolerance == None:
             tolerance = Structure.DefaultSymmetryEquivalenceTolerance;
 
-        # Only perform the symmetry analysis if it hasn't been done yet (_symmetryAnalysisTolerance == None) or if the tolerance has changed.
+        # Only perform the symmetry analysis if it hasn't been done yet or if the tolerance has changed.
 
-        if tolerance != self._symmetryAnalysisTolerance:
-            # Call the get_symmetry_dataset() routine from spglib.
+        performAnalysis = tolerance != self._symmetryAnalysisTolerance;
 
-            result = spg.get_symmetry_dataset(
-                (self._latticeVectors, self._atomPositionsView, self._atomTypeNumbersView),
-                symprec = tolerance
-                );
+        if not performAnalysis:
+            if spacegroupOnly:
+                performAnalysis = self._pSpacegroup == None;
+            else:
+                performAnalysis = self._pSymmetryOperations == None;
 
-            if result == None:
-                raise Exception("Error: spglib get_symmetry_dataset() routine returned None.");
+        if performAnalysis:
+            # if spacegroupOnly is set, we do not perform and cache a full symmetry dataset - for large sets of high-symmetry structures this can consume a lot of memory.
 
-            # spglib returns symmetry operations in rotation + translation format.
-            # The translation vectors sometimes show numerical noise, which can sometimes cause structures related by symmetry to be detected as inequivalent.
-            # We therefore round them based on the set tolerance and clamp to the range [0, 1].
+            if spacegroupOnly:
+                # Call the get_spacegroup() routine from spglib.
 
-            roundDecimals = -1 * int(
-                math.floor(math.log10(tolerance))
-                );
+                result = spg.get_spacegroup(
+                    (self._latticeVectors, self._atomPositionsView, self._atomTypeNumbersView),
+                    symprec = tolerance
+                    );
 
-            translations = [
-                np.round(translation, roundDecimals) % 1.0
-                    for translation in result['translations']
-                ];
+                if result == None:
+                    raise Exception("Error: spglib get_spacegroup() routine returned None.");
 
-            self._pSpacegroup = (result['number'], result['international']);
-            self._pSymmetryOperations = [item for item in zip(result['rotations'], translations)];
+                match = Structure._SpacegroupRegex.match(result);
 
-            # Store the unique atom indices along with the number of equivalent sites.
+                if match:
+                    self._pSpacegroup = (
+                        (int(match.group('spacegroup_number')), match.group('spacegroup_symbol').strip())
+                        );
+                else:
+                    raise Exception("Error: Failed to parse string returned by spglib get_spacegroup().")
 
-            uniqueAtomIndices = np.unique(result['equivalent_atoms']);
+            else:
+                # Call the get_symmetry_dataset() routine from spglib.
 
-            self._pUniqueAtomIndices = (
-                [index for index in uniqueAtomIndices],
-                [len(np.where(result['equivalent_atoms'] == index)[0]) for index in uniqueAtomIndices]
-                );
+                result = spg.get_symmetry_dataset(
+                    (self._latticeVectors, self._atomPositionsView, self._atomTypeNumbersView),
+                    symprec = tolerance
+                    );
+
+                if result == None:
+                    raise Exception("Error: spglib get_symmetry_dataset() routine returned None.");
+
+                # spglib returns symmetry operations in rotation + translation format.
+                # The translation vectors sometimes show numerical noise, which can sometimes cause structures related by symmetry to be detected as inequivalent.
+                # We therefore round them based on the set tolerance and clamp to the range [0, 1].
+
+                roundDecimals = -1 * int(
+                    math.floor(math.log10(tolerance))
+                    );
+
+                translations = [
+                    np.round(translation, roundDecimals) % 1.0
+                        for translation in result['translations']
+                    ];
+
+                self._pSpacegroup = (result['number'], result['international']);
+                self._pSymmetryOperations = [item for item in zip(result['rotations'], translations)];
+
+                # Store the unique atom indices along with the number of equivalent sites.
+
+                uniqueAtomIndices = np.unique(result['equivalent_atoms']);
+
+                self._pUniqueAtomIndices = (
+                    [index for index in uniqueAtomIndices],
+                    [len(np.where(result['equivalent_atoms'] == index)[0]) for index in uniqueAtomIndices]
+                    );
 
             # Store the symmetry tolerance used to call the spglib functions.
 
@@ -293,7 +326,7 @@ class Structure:
 
         self._latticeVectors = latticeVectors;
 
-    def SetAtoms(self, indexOrIndices, atomTypes, atomPositions):
+    def SetAtoms(self, indexOrIndices, atomTypes, atomPositions, atomicSymbolLookupTable = None):
         """
         Set type(s) and/or position(s) of selected atoms.
 
@@ -301,6 +334,9 @@ class Structure:
             indexOrIndices -- an index or list of indices of atoms to update.
             atomTypes -- an atom type or list of atom types to update for the selected atoms.
             atomPositions -- a NumPy vector or list of NumPy vectors to update for the selected atoms.
+
+        Keyword arguments:
+            atomicSymbolLookupTable -- { type_number : symbol } dictionary used to map non-standard atom types to integer type numbers.
 
         Notes:
             If indexOrIndices is a list, atomTypes and atomPositions, if supplied, must also be lists.
@@ -355,7 +391,7 @@ class Structure:
         # Convert atom types to atom-type numbers.
 
         for i, atomType in enumerate(atomTypes):
-            typeNumber = AtomTypeToAtomTypeNumber(atomType);
+            typeNumber = AtomTypeToAtomTypeNumber(atomType, atomicSymbolLookupTable);
 
             if typeNumber == None:
                 raise Exception("Error: Unable to convert atom-type '{0}' to an atom-type number.".format(atomType));
@@ -381,13 +417,16 @@ class Structure:
 
         self._ResetLazyPropertyFields();
 
-    def SwapAtoms(self, atomTypes1, atomTypes2):
+    def SwapAtoms(self, atomTypes1, atomTypes2, atomicSymbolLookupTable = None):
         """
         Swaps all atoms of type(s) specified in atomTypes1 for the corresponding type(s) in atomTypes2.
 
         Arguments:
             atomTypes1 -- an atom type or list of atom types to swap.
             atomTypes2 -- an atom type or list of atom types to swap to.
+
+        Keyword arguments:
+            atomicSymbolLookupTable -- { type_number : symbol } dictionary used to map non-standard atom types to integer type numbers.
 
         Notes:
             If atomTypes1 is a list, atomTypes2 must also be a list.
@@ -406,17 +445,17 @@ class Structure:
 
         if isinstance(atomTypes1, list):
             atomTypeNumbers1 = [
-                AtomTypeToAtomTypeNumber(atomType) for atomType in atomTypes1
+                AtomTypeToAtomTypeNumber(atomType, atomicSymbolLookupTable) for atomType in atomTypes1
                 ];
         else:
-            atomTypeNumbers1 = [AtomTypeToAtomTypeNumber(atomTypes1)];
+            atomTypeNumbers1 = [AtomTypeToAtomTypeNumber(atomTypes1, atomicSymbolLookupTable)];
 
         if isinstance(atomTypes2, list):
             atomTypeNumbers2 = [
-                AtomTypeToAtomTypeNumber(atomType) for atomType in atomTypes2
+                AtomTypeToAtomTypeNumber(atomType, atomicSymbolLookupTable) for atomType in atomTypes2
                 ];
         else:
-            atomTypeNumbers2 = [AtomTypeToAtomTypeNumber(atomTypes2)];
+            atomTypeNumbers2 = [AtomTypeToAtomTypeNumber(atomTypes2, atomicSymbolLookupTable)];
 
         if len(atomTypeNumbers1) != len(atomTypeNumbers2):
             raise Exception("Error: atomTypes1 and atomTypes2 must contain the same number of atom types.");
@@ -512,9 +551,9 @@ class Structure:
             tolerance -- tolerance for performing the symmetry analysis.
         """
 
-        # Perform the symmetry analysis if required.
+        # If the spacegroup has not already been computed, find and cache it.
 
-        self._PerformSymmetryAnalysis(tolerance = tolerance);
+        self._PerformSymmetryAnalysis(tolerance = tolerance, spacegroupOnly = True);
 
         return self._pSpacegroup;
 
@@ -645,32 +684,25 @@ class Structure:
 
         # Convert the atom-type numbers to symbols.
 
-        atomicSymbols = [];
+        symbols = [];
 
         for typeNumber in typeNumbers:
-            if atomicSymbolLookupTable != None and typeNumber in atomicSymbolLookupTable:
-                # If a lookup table is supplied by the user, search that first.
+            # Try to look up the symbol from either the lookup table or the Constants module.
 
-                atomicSymbols.append(
-                    atomicSymbolLookupTable[typeNumber]
-                    );
+            symbol  = AtomTypeNumberToAtomicSymbol(typeNumber, atomicSymbolLookupTable);
+
+            if symbol != None:
+                symbols.append(symbol);
             else:
-                # If not, try the periodic table in the Constants module.
+                # If this fails, convert the type number to a string.
 
-                atomicSymbol = Constants.AtomicNumberToSymbol(typeNumber);
-
-                if atomicSymbol != None:
-                    atomicSymbols.append(atomicSymbol);
-                else:
-                    # If all else fails, convert the type number to a string.
-
-                    atomicSymbols.append(
-                        str(typeNumber)
-                        );
+                symbols.append(
+                    str(typeNumber)
+                    );
 
         # Return the list of symbols and counts.
 
-        return (atomicSymbols, atomCounts);
+        return (symbols, atomCounts);
 
     def GetAtomIndexRanges(self):
         """ Return a dictionary of tuples mapping atom-type numbers to index ranges. """
@@ -726,6 +758,33 @@ class Structure:
             self._pChemicalFormula = chemicalFormula;
 
         return chemicalFormula;
+
+    def GetLatticeParameters(self):
+        """ Compute and return a tuple of (a, b, c, \alpha, \beta, \gamma, V) lattice parameters. """
+
+        latticeVectors = self._latticeVectors;
+
+        # Lattice constants are the lengths of the three lattice vectors.
+
+        cellLengths = [
+            np.linalg.norm(v) for v in latticeVectors
+            ];
+
+        # Cell angles are calculated using a . b = |a||b|cos(\theta) -> \theta = acos([a . b] / |a||b|).
+        # \alpha, \beta and \gamma are the angles beteen (b, c), (a, c) and (a, b), respectively.
+
+        cellAngles = [
+            (180.0 / math.pi) * math.acos(np.dot(latticeVectors[i1], latticeVectors[i2]) / (cellLengths[i1] * cellLengths[i2]))
+                for i1, i2 in [(1, 2), (0, 2), (0, 1)]
+            ];
+
+        # V = a . (b x c).
+
+        volume = np.dot(latticeVectors[0], np.cross(latticeVectors[1], latticeVectors[2]));
+
+        # Convert to a tuple and return.
+
+        return tuple(cellLengths) + tuple(cellAngles) + (volume, );
 
     def GetNeighbourTable(self):
         """ Compute and return an NxN NumPy matrix of interatomic distances (a neighbour table). """
@@ -891,6 +950,12 @@ class Structure:
 
     _AtomDataType = [('TypeNumber', 'i8'), ('PosX', 'f8'), ('PosY', 'f8'), ('PosZ', 'f8')];
 
+    """ Regex to parse string returned by the spglib get_spacegroup() function. """
+
+    _SpacegroupRegex = re.compile(
+        r"(?P<spacegroup_symbol>.+) \((?P<spacegroup_number>\d+)\)$"
+        );
+
     """ Default tolerance for symmetry analysis and structure comparisons. """
 
     DefaultSymmetryEquivalenceTolerance = 1.0e-5;
@@ -900,7 +965,7 @@ class Structure:
 # Functions
 # ---------
 
-def AtomTypeToAtomTypeNumber(atomType):
+def AtomTypeToAtomTypeNumber(atomType, atomicSymbolLookupTable = None):
     """ Convert atomType, which may be an integer or an atomic symbol, to an atom-type number. """
 
     try:
@@ -908,6 +973,28 @@ def AtomTypeToAtomTypeNumber(atomType):
 
         return int(atomType);
     except (TypeError, ValueError):
-        # If that fails, assume atomType is an atomic symbol and lookup the corresponding atomic number.
+        # If that fails, assume atomType is an atomic symbol and look up the corresponding atomic number.
+
+        if atomicSymbolLookupTable != None:
+            # If a lookup table is supplied, search it for the symbol.
+
+            for typeNumber, symbol in atomicSymbolLookupTable.items():
+                if atomType == symbol:
+                    return typeNumber;
+
+        # If that fails, look up the symbol in the periodic table.
 
         return Constants.SymbolToAtomicNumber(atomType);
+
+def AtomTypeNumberToAtomicSymbol(atomTypeNumber, atomicSymbolLookupTable = None):
+    """ Convert an integer atomTypeNumber to an atomic symbol. """
+
+    # If a lookup table is supplied, search for the atom-type number.
+
+    if atomicSymbolLookupTable != None:
+        if atomTypeNumber in atomicSymbolLookupTable:
+            return atomicSymbolLookupTable[atomTypeNumber];
+
+    # If not, look up the type number in the periodic table.
+
+    return Constants.AtomicNumberToSymbol(atomTypeNumber);

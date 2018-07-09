@@ -60,7 +60,7 @@ def ExportResultSetPassthrough(resultSetGenerator, fileFormat = 'vasp', prefix =
 
         # If a prefix has been set, start with that.
 
-        archiveName = "{0}_".format(prefix if prefix != None else "");
+        archiveName = "{0}_".format(prefix) if prefix != None else "";
 
         # Add the substitution number to the name.
 

@@ -29,8 +29,8 @@ class MetadiseCalculator(TotalEnergyCalculatorBase):
         self,
         potenPath = None, speciesCharges = None,
         metadiseExe = None, tempDirectory = None,
-        atomicSymbolLookupTable = None,
-        useMP = False, mpNumProcesses = None
+        useMP = False, mpNumProcesses = None,
+        atomicSymbolLookupTable = None, removeAtoms = None
         ):
 
         # Set default parameters.
@@ -59,7 +59,11 @@ class MetadiseCalculator(TotalEnergyCalculatorBase):
 
         # Call the base class constructor.
 
-        super(MetadiseCalculator, self).__init__(tempDirectory = tempDirectory, useMP = useMP, mpNumProcesses = mpNumProcesses);
+        super(MetadiseCalculator, self).__init__(
+            tempDirectory = tempDirectory,
+            useMP = useMP, mpNumProcesses = mpNumProcesses,
+            atomicSymbolLookupTable = atomicSymbolLookupTable, removeAtoms = removeAtoms
+            );
 
         # Store fields.
 
@@ -67,8 +71,6 @@ class MetadiseCalculator(TotalEnergyCalculatorBase):
         self._speciesCharges = speciesCharges;
 
         self._metadiseExe = metadiseExe;
-
-        self._atomicSymbolLookupTable = atomicSymbolLookupTable;
 
     # --------------
     # Pubilc Methods

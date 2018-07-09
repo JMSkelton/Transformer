@@ -33,7 +33,7 @@ def GetFileTypeFromExtension(filePath):
         if fileFormat == supportedFileFormat:
             return (fileFormat, defaultExtension);
 
-def ReadStructure(filePathOrObj, fileFormat = None, atomTypeNumberLookupTable = None):
+def ReadStructure(filePathOrObj, fileFormat = None, atomicSymbolLookupTable = None):
     # _GetCheckFileFormat() attempts to automatically determine a file format if one is not supplied, and also checks the format is supported for reading.
 
     fileFormat = _GetCheckFileFormat(filePathOrObj, fileFormat, mode = 'r');
@@ -60,12 +60,12 @@ def ReadStructure(filePathOrObj, fileFormat = None, atomTypeNumberLookupTable = 
 
         if fileFormat == 'aims':
             return _AIMS.ReadGeometryInFile(
-                fileObj, atomTypeNumberLookupTable = atomTypeNumberLookupTable
+                fileObj, atomicSymbolLookupTable = atomicSymbolLookupTable
                 );
 
         elif fileFormat == 'vasp':
             return _VASP.ReadPOSCARFile(
-                fileObj, atomTypeNumberLookupTable = atomTypeNumberLookupTable
+                fileObj, atomicSymbolLookupTable = atomicSymbolLookupTable
                 );
 
         else:

@@ -8,17 +8,15 @@
 import warnings;
 
 from Transformer import Constants;
-from Transformer.IO import _Common;
+from Transformer import Structure;
 from Transformer.Utilities import StructureTools;
-
-from Transformer.Structure import Structure;
 
 
 # ---------
 # Functions
 # ---------
 
-def ReadPOSCARFile(inputReader, atomTypeNumberLookupTable = None):
+def ReadPOSCARFile(inputReader, atomicSymbolLookupTable = None):
     # Variables to collect.
 
     systemName = None;
@@ -125,7 +123,10 @@ def ReadPOSCARFile(inputReader, atomTypeNumberLookupTable = None):
 
         # Convert the atomic symbols to atom-type numbers.
 
-        atomTypeNumbers = _Common.AtomicSymbolsToAtomTypeNumbers(atomicSymbols, atomTypeNumberLookupTable = atomTypeNumberLookupTable);
+        atomTypeNumbers = [
+            Structure.AtomTypeToAtomTypeNumber(symbol, atomicSymbolLookupTable = atomicSymbolLookupTable)
+                for symbol in atomicSymbols
+            ];
     else:
         # If not, issue a warning and assign negative type numbers from -1.
 
@@ -143,7 +144,7 @@ def ReadPOSCARFile(inputReader, atomTypeNumberLookupTable = None):
 
     # Return a Structure object.
 
-    return Structure(latticeVectors, atomPositions, atomTypeNumbers, name = systemName);
+    return Structure.Structure(latticeVectors, atomPositions, atomTypeNumbers, name = systemName);
 
 def WritePOSCARFile(structure, outputWriter, atomicSymbolLookupTable = None):
     # Write the system name; Structure.GetName() returns a sensible default value if a name is not set.

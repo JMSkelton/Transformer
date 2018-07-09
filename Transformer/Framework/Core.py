@@ -11,6 +11,8 @@ import time;
 from Transformer import Structure;
 from Transformer import StructureSet;
 
+from Transformer.Framework import Utilities;
+
 from Transformer.Utilities import MultiprocessingHelper;
 from Transformer.Utilities import StructureTools;
 
@@ -184,7 +186,7 @@ class _StructureSetAccumulator(MultiprocessingHelper.AccumulatorBase):
 
             structureSet = StructureSet.StructureSet(
                 tolerance = tolerance, symmetryExpansion = symmetryExpansion, parentSymmetryOperations = parentSymmetryOperations,
-                compareLatticeVecors = False, compareAtomTypeNumbers = False, compareAtomPositions = True,
+                compareLatticeVectors = False, compareAtomTypeNumbers = False, compareAtomPositions = True,
                 expectedAtomCount = atomCount, compareAtomIndexRanges = compareAtomIndexRanges
                 );
 
@@ -193,7 +195,7 @@ class _StructureSetAccumulator(MultiprocessingHelper.AccumulatorBase):
             if filterObj != None and filterObj.RequiresFilteredStructures():
                 structureSetFiltered = StructureSet.StructureSet(
                     tolerance = tolerance, symmetryExpansion = symmetryExpansion, parentSymmetryOperations = parentSymmetryOperations,
-                    compareLatticeVecors = False, compareAtomTypeNumbers = False, compareAtomPositions = True,
+                    compareLatticeVectors = False, compareAtomTypeNumbers = False, compareAtomPositions = True,
                     expectedAtomCount = atomCount, compareAtomIndexRanges = compareAtomIndexRanges
                     );
 
@@ -504,9 +506,9 @@ def _AtomicSubstitutions_PerformSubstitution(
     return (newStructureSet, newPermutationCount);
 
 
-# -----------------------------------------
-# Substituted Structure Generation Routines
-# -----------------------------------------
+# ----------------------------------------
+# Substituted Structure Generation Routine
+# ----------------------------------------
 
 def _GenerateSubstitutedStructutes(
         initialStructureSet, substitution,
@@ -551,10 +553,27 @@ def _GenerateSubstitutedStructutes(
             if structureSet != None
         ];
 
-    # Merge result sets using a parallel "divide and conquer" reduction.
+    # Merge structure sets in results.
 
-    newStructureSet, newStructureSetFiltered, numGen = _GenerateSubstitutedStructutes_Reduce(
-        results, printProgressUpdate
+    newStructureSet = Utilities.MergeStructureSets(
+        [structureSet for structureSet, _, _ in results], useMP = True, mpNumProcesses = mpNumProcesses, printProgressUpdate = printProgressUpdate, inPlace = True
+        );
+
+    # If required, merge filtered structure sets in results.
+
+    newStructureSetFiltered = None;
+
+    _, structureSetFiltered, _ = results[0];
+
+    if structureSetFiltered != None:
+        newStructureSetFiltered = Utilities.MergeStructureSets(
+            [structureSetFiltered for _, structureSetFiltered, _ in results], useMP = True, mpNumProcesses = mpNumProcesses, printProgressUpdate = printProgressUpdate, inPlace = True
+            );
+
+    # Sum numbers of generated structures.
+
+    numGen = sum(
+        numGen for _, _, numGen in results
         );
 
     # If a filter has been supplied, call the SetFilteredStructures() and FinaliseMergedStructureSet() methods.
@@ -568,161 +587,6 @@ def _GenerateSubstitutedStructutes(
     # Return the structures and degeneracies from the merged set, along with the number of structures generated.
 
     return (newStructureSet, numGen);
-
-def _GenerateSubstitutedStructutes_Reduce(results, printProgressUpdate):
-    # If there is only one result in the results list, simply return it.
-
-    if len(results) == 1:
-        return results[0];
-
-    # Determine whether we are also reducing sets of filtered structures.
-
-    _, structureSetFiltered, _ = results[0];
-
-    reducingFilteredStructureSets = structureSetFiltered != None;
-
-    # Setting a tqdm-based progress bar for the reduction would be (a) fiddly, and (b) not particularly informative; if a progress bar is requested, we print a set of status messages instead.
-
-    if printProgressUpdate:
-        numStructures = sum(
-            structureSet.GetStructureCount() for structureSet, _, _ in results
-            );
-
-        numStructuresFiltered = None;
-
-        if reducingFilteredStructureSets:
-            numStructuresFiltered = sum(
-                structureSetFiltered.GetStructureCount() for _, structureSetFiltered, _ in results
-                );
-
-        if reducingFilteredStructureSets:
-            print("MPReduce: Reducing {0} structure set(s) w/ {1} + {2} structure(s)".format(len(results), numStructures, numStructuresFiltered));
-        else:
-            print("MPReduce: Reducing {0} structure set(s) w/ {1} structure(s)".format(len(results), numStructures));
-
-    # The reduction is done via a divide-and-conquer process where N // 2 reductions are performed at each step.
-    # The final reduction is a serial merge, while prior steps can be done in parallel using a process pool.
-
-    # Initialise a process pool if required.
-    # The number of worker processes we need is equal to the size of the first reduction group, and will always be at most half the value of mpNumProcesses supplied to the calling _GenerateSubstitutedStructutesMP() function.
-
-    processPool = None;
-
-    numGroups = len(results) // 2;
-
-    if numGroups > 1:
-        processPool = multiprocessing.Pool(processes = numGroups);
-
-    # Perform the reduction.
-
-    while len(results) > 1:
-        # Record the initial numbers of structures.
-
-        numStructures1 = sum(
-            structureSet.GetStructureCount() for structureSet, _, _ in results
-            );
-
-        numStructuresFiltered1 = None;
-
-        if reducingFilteredStructureSets:
-            numStructuresFiltered1 = sum(
-                structureSetFiltered.GetStructureCount() for _, structureSetFiltered, _ in results
-                );
-
-        # Calculate the number of reduction groups.
-
-        numGroups = len(results) // 2;
-
-        if numGroups <= 1:
-            # Final serial merge.
-
-            # Close the process pool if required.
-
-            if processPool != None:
-                processPool.close();
-
-            # Merge the structure sets in results into one, and total the number of generated structures.
-
-            structureSet, structureSetFiltered, numGen = results[0];
-
-            for structureSet2, structureSetFiltered2, numGen2 in results[1:]:
-                structureSet.UpdateUnion(structureSet2);
-
-                # To avoid keeping unused structures in memory, delete the reference to the old structure set.
-
-                del structureSet2;
-
-                if structureSetFiltered != None:
-                    structureSetFiltered.UpdateUnion(structureSetFiltered2);
-
-                    del structureSetFiltered2;
-
-                numGen += numGen2;
-
-            results = [(structureSet, structureSetFiltered, numGen)];
-        else:
-            # Group the structure sets into numGroups pairs.
-
-            mapGroups = [(results[i], results[i + 1]) for i in range(0, 2 * numGroups, 2)];
-
-            # Reduce each pair using Pool.map().
-
-            resultsNew = processPool.map(
-                _GenerateSubstitutedStructutesMP_Reduce_MapFunction, mapGroups
-                );
-
-            # Update the results list.
-
-            results = resultsNew + results[2 * numGroups:];
-
-        # If required, print a status message.
-
-        if printProgressUpdate:
-            numStructures2 = sum(
-                structureSet.GetStructureCount() for structureSet, _, _ in results
-                );
-
-            numStructuresFiltered2 = None;
-
-            if reducingFilteredStructureSets:
-                numStructuresFiltered2 = sum(
-                    structureSetFiltered.GetStructureCount() for _, structureSetFiltered, _ in results
-                    );
-
-            if numStructures2 < numStructures1 or (reducingFilteredStructureSets and numStructuresFiltered2 < numStructuresFiltered):
-                if reducingFilteredStructureSets:
-                    print("MPReduce: Reduced {0} + {1} -> {2} + {3} structure(s)".format(numStructures1, numStructuresFiltered1, numStructures2, numStructuresFiltered2));
-                else:
-                    print("MPReduce: Reduced {0} -> {1} structure(s)".format(numStructures1, numStructures2));
-
-    # Once the merging is complete, return the merged structure set(s) and count.
-
-    if printProgressUpdate:
-        print("");
-
-    return results[0];
-
-def _GenerateSubstitutedStructutesMP_Reduce_MapFunction(args):
-    # Unpack arguments.
-
-    (structureSet1, structureSetFiltered1, numGen1), (structureSet2, structureSetFiltered2, numGen2) = args;
-
-    # Merge the second structure set into the first and delete the former.
-
-    structureSet1.UpdateUnion(structureSet2);
-
-    del structureSet2;
-
-    # If a filter is being used, merge the filtered structure sets.
-
-    if structureSetFiltered1 != None:
-        structureSetFiltered1.UpdateUnion(structureSetFiltered2);
-
-        del structureSetFiltered2;
-
-    # Return the updated first structure set(s) along with updated count.
-
-    return (structureSet1, structureSetFiltered1, numGen1 + numGen2);
 
 
 # ------------------
